@@ -32,11 +32,13 @@ describe('isPointInView', () => {
 
 describe('clampScale', () => {
   it('clamps below the minimum', () => {
-    expect(clampScale(0)).toBe(0.01)
+    // Bounds are wide enough to fit real EVE SDE coordinate magnitudes
+    // (galaxy-wide position2D spans ~1e18), not just small test fixtures.
+    expect(clampScale(0)).toBe(1e-18)
   })
 
   it('clamps above the maximum', () => {
-    expect(clampScale(1000)).toBe(50)
+    expect(clampScale(1e10)).toBe(1e6)
   })
 
   it('passes through an in-range value', () => {

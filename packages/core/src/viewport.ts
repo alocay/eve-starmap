@@ -1,7 +1,7 @@
 import type { Viewport } from './types.js'
 
-const MIN_SCALE = 0.01
-const MAX_SCALE = 50
+const MIN_SCALE = 1e-18
+const MAX_SCALE = 1e6
 
 export function worldToScreen(viewport: Viewport, x: number, y: number): { x: number; y: number } {
   return {
