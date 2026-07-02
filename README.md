@@ -13,7 +13,7 @@ npm run build
 
 ## Regenerating universe data
 
-The bundled default dataset ships as a placeholder until `node scripts/build-universe-data.js` is run against a live SDE mirror — see `docs/superpowers/specs/2026-07-02-eve-starmap-design.md` and Task 9 of `docs/superpowers/plans/2026-07-02-eve-starmap-mvp.md` for details.
+The bundled default dataset (`packages/core/src/data/defaultUniverseData.ts`) already ships with real EVE Online data built from the SDE. `node scripts/build-universe-data.js` exists to *refresh* that dataset against a newer SDE release in the future, not to produce the first real dataset — see `docs/superpowers/specs/2026-07-02-eve-starmap-design.md` and Task 9 of `docs/superpowers/plans/2026-07-02-eve-starmap-mvp.md` for details.
 
 ## License
 
