@@ -52,6 +52,24 @@ describe('Quadtree', () => {
 
     expect(qt.queryRange(worldBounds)).toEqual([])
   })
+
+  it('retains a point sitting exactly on the outer maxX bound', () => {
+    const qt = new Quadtree(worldBounds)
+    qt.insert(sys(1, 100, 0))
+
+    const found = qt.queryRange(worldBounds)
+
+    expect(found.map(p => p.id)).toEqual([1])
+  })
+
+  it('retains a point sitting exactly on the outer maxY bound', () => {
+    const qt = new Quadtree(worldBounds)
+    qt.insert(sys(1, 0, 100))
+
+    const found = qt.queryRange(worldBounds)
+
+    expect(found.map(p => p.id)).toEqual([1])
+  })
 })
 
 describe('buildQuadtree', () => {

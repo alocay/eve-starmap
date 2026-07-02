@@ -34,10 +34,7 @@ export class Quadtree {
     }
 
     if (!this.divided) this.subdivide()
-    this.northeast!.insert(point)
-    this.northwest!.insert(point)
-    this.southeast!.insert(point)
-    this.southwest!.insert(point)
+    this.routeToChild(point).insert(point)
   }
 
   queryRange(range: Bounds): SystemNode[] {
@@ -94,15 +91,31 @@ export class Quadtree {
     const existing = this.points
     this.points = []
     for (const p of existing) {
-      this.northeast.insert(p)
-      this.northwest.insert(p)
-      this.southeast.insert(p)
-      this.southwest.insert(p)
+      this.routeToChild(p).insert(p)
     }
   }
 
+  /**
+   * Determines exactly one child quadrant for a point during subdivision,
+   * using the split midpoint directly. This guarantees every point is routed
+   * to exactly one child (no duplication, no loss), regardless of whether the
+   * point sits precisely on the internal split line.
+   */
+  private routeToChild(point: SystemNode): Quadtree {
+    const { minX, minY, maxX, maxY } = this.bounds
+    const midX = (minX + maxX) / 2
+    const midY = (minY + maxY) / 2
+    const isWest = point.x <= midX
+    const isNorth = point.y <= midY
+
+    if (isWest && isNorth) return this.northwest!
+    if (!isWest && isNorth) return this.northeast!
+    if (isWest && !isNorth) return this.southwest!
+    return this.southeast!
+  }
+
   private contains(bounds: Bounds, x: number, y: number): boolean {
-    return x >= bounds.minX && x < bounds.maxX && y >= bounds.minY && y < bounds.maxY
+    return x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY
   }
 
   private intersects(a: Bounds, b: Bounds): boolean {
