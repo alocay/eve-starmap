@@ -32,7 +32,7 @@ function makeMockCanvas(ctx: any) {
 const sampleData = {
   systems: [
     { id: 1, name: 'Alpha', constellationId: 1, regionId: 1, x: 0, y: 0 },
-    { id: 2, name: 'Beta', constellationId: 1, regionId: 1, x: 100, y: 0 },
+    { id: 2, name: 'Beta', constellationId: 1, regionId: 1, x: 40, y: 0 },
   ],
   stargates: [{ fromSystemId: 1, toSystemId: 2 }],
 }

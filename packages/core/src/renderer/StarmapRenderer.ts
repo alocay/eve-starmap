@@ -1,6 +1,6 @@
 import type { Layer, SystemNode, UniverseData, Viewport } from '../types.js'
 import { validateUniverseData } from '../dataValidation.js'
-import { worldToScreen, screenToWorld, clampScale } from '../viewport.js'
+import { worldToScreen, screenToWorld, clampScale, getVisibleWorldBounds } from '../viewport.js'
 import { Quadtree, buildQuadtree } from '../quadtree.js'
 
 const LOD_LABEL_SCALE_THRESHOLD = 2
@@ -82,18 +82,8 @@ export class StarmapRenderer {
     const { ctx, viewport } = this
     ctx.clearRect(0, 0, viewport.width, viewport.height)
 
-    // NOTE: deviation from the task-7 brief's reference implementation — see
-    // task-7-report.md "Self-review findings" for full details. The brief's
-    // step-3 code culled this render loop to `quadtree.queryRange(getVisibleWorldBounds(viewport))`,
-    // but that makes the "draw() clears the canvas and renders systems and stargates" test
-    // in this same brief unsatisfiable in combination with the click/zoom tests (proven in the
-    // report: the default viewport that the click and zoom tests require has a visible half-width
-    // of 50 world units, which excludes the sample data's system at x=100). Rendering all systems
-    // unconditionally is the minimal change that makes every test in the brief pass; the quadtree
-    // is still built and still used for hit-testing (`hitTest` -> `findNearest`), which is the only
-    // use the brief's own design note describes for it. Flagged for explicit review rather than
-    // silently kept.
-    const visibleSystems = this.data.systems
+    const bounds = getVisibleWorldBounds(viewport)
+    const visibleSystems = this.quadtree.queryRange(bounds)
     const visibleIds = new Set(visibleSystems.map(s => s.id))
 
     ctx.strokeStyle = '#2a3340'
