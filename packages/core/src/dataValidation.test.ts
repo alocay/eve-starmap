@@ -37,6 +37,14 @@ describe('validateUniverseData', () => {
     expect(() => validateUniverseData(data)).toThrow(/missing required fields/)
   })
 
+  it('throws when a system has non-finite coordinates', () => {
+    const data = { systems: [{ ...validSystem, x: NaN }], stargates: [] }
+    expect(() => validateUniverseData(data)).toThrow(/missing required fields/)
+
+    const data2 = { systems: [{ ...validSystem, y: Infinity }], stargates: [] }
+    expect(() => validateUniverseData(data2)).toThrow(/missing required fields/)
+  })
+
   it('throws when a stargate references an unknown system id', () => {
     const data = { systems: [validSystem], stargates: [{ fromSystemId: 1, toSystemId: 999 }] }
     expect(() => validateUniverseData(data)).toThrow('Invalid universe data: stargate references unknown system id')

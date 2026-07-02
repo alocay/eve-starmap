@@ -23,8 +23,8 @@ export function validateUniverseData(data: unknown): UniverseData {
       typeof s.name === 'string' &&
       typeof s.constellationId === 'number' &&
       typeof s.regionId === 'number' &&
-      typeof s.x === 'number' &&
-      typeof s.y === 'number'
+      Number.isFinite(s.x) &&
+      Number.isFinite(s.y)
     if (!valid) {
       throw new Error(`Invalid universe data: system is missing required fields: ${JSON.stringify(sys)}`)
     }
