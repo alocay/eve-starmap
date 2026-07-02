@@ -38,4 +38,10 @@ describe('createColorScale', () => {
     const colorFor = createColorScale([5], { palette: ['#000000', '#ffffff'] })
     expect(colorFor(5)).toBe('rgb(0, 0, 0)')
   })
+
+  it('returns the start color for an empty values array with no explicit min/max', () => {
+    const colorFor = createColorScale([], { palette: ['#000000', '#ffffff'] })
+    expect(colorFor(0)).toBe('rgb(0, 0, 0)')
+    expect(colorFor(999)).toBe('rgb(0, 0, 0)')
+  })
 })

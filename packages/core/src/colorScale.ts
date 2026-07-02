@@ -16,8 +16,8 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 export function createColorScale(values: number[], options: ColorScaleOptions = {}): (value: number) => string {
-  const min = options.min ?? Math.min(...values)
-  const max = options.max ?? Math.max(...values)
+  const min = options.min ?? (values.length > 0 ? Math.min(...values) : 0)
+  const max = options.max ?? (values.length > 0 ? Math.max(...values) : 0)
   const [fromHex, toHex] = options.palette ?? DEFAULT_PALETTE
   const from = hexToRgb(fromHex)
   const to = hexToRgb(toHex)
