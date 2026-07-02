@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>eve-starmap playground</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0a0e14;
+        color: #c8d0da;
+        font-family: 'Consolas', 'Courier New', monospace;
+        overflow: hidden;
+      }
+      #panel {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+        background: #12161d;
+        border: 1px solid #2a3340;
+        border-radius: 4px;
+        padding: 10px 14px;
+        font-size: 12px;
+        line-height: 1.6;
+        max-width: 320px;
+      }
+      #panel button {
+        background: #1a1f27;
+        color: #c8d0da;
+        border: 1px solid #2a3340;
+        border-radius: 3px;
+        padding: 4px 8px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        margin-top: 6px;
+      }
+      #panel button:hover {
+        border-color: #e8a33d;
+      }
+      #hovered,
+      #clicked {
+        color: #e8a33d;
+      }
+      #search-box {
+        position: relative;
+        margin-top: 8px;
+      }
+      #search-input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #1a1f27;
+        color: #c8d0da;
+        border: 1px solid #2a3340;
+        border-radius: 3px;
+        padding: 5px 8px;
+        font-family: inherit;
+        font-size: 12px;
+      }
+      #search-input:focus {
+        outline: none;
+        border-color: #e8a33d;
+      }
+      #suggestions {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        right: 0;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        background: #12161d;
+        border: 1px solid #2a3340;
+        border-radius: 3px;
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 2;
+      }
+      #suggestions li {
+        padding: 5px 8px;
+        cursor: pointer;
+      }
+      #suggestions li:hover,
+      #suggestions li.active {
+        background: #1a1f27;
+        color: #e8a33d;
+      }
+      canvas {
+        display: block;
+      }
+      #tooltip {
+        position: fixed;
+        z-index: 3;
+        pointer-events: none;
+        transform: translate(-50%, calc(-100% - 10px));
+        background: #12161d;
+        border: 1px solid #e8a33d;
+        border-radius: 3px;
+        padding: 2px 6px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <div><strong>eve-starmap playground</strong></div>
+      <div>Drag to pan, scroll to zoom, click a system.</div>
+      <div>Hover: <span id="hovered">&mdash;</span></div>
+      <div>Clicked: <span id="clicked">&mdash;</span></div>
+      <button id="toggle-heatmap">Toggle heatmap layer</button>
+      <div id="search-box">
+        <input id="search-input" type="text" placeholder="Search system name..." autocomplete="off" />
+        <ul id="suggestions" hidden></ul>
+      </div>
+    </div>
+    <div id="tooltip" hidden></div>
+    <canvas id="map" width="1600" height="900"></canvas>
+    <script type="module" src="/playground/main.js"></script>
+  </body>
+</html>
