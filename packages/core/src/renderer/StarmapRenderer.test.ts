@@ -33,6 +33,7 @@ const sampleData = {
   systems: [
     { id: 1, name: 'Alpha', constellationId: 1, regionId: 1, x: 0, y: 0 },
     { id: 2, name: 'Beta', constellationId: 1, regionId: 1, x: 40, y: 0 },
+    { id: 3, name: 'Gamma', constellationId: 1, regionId: 1, x: 500, y: 0 },
   ],
   stargates: [{ fromSystemId: 1, toSystemId: 2 }],
 }
@@ -56,8 +57,22 @@ describe('StarmapRenderer', () => {
     renderer.draw()
 
     expect(ctx.clearRect).toHaveBeenCalled()
+    // arc called twice for systems 1 and 2 only; system 3 (Gamma at x:500) is outside
+    // the default visible bounds and must be culled by the quadtree to avoid regression
     expect(ctx.arc).toHaveBeenCalledTimes(2)
     expect(ctx.stroke).toHaveBeenCalledTimes(1)
+  })
+
+  it('excludes systems outside the visible viewport bounds from rendering', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData)
+
+    renderer.draw()
+
+    // system 3 (x: 500) is far outside the default visible bounds — if culling
+    // were removed/bypassed, arc would be called 3 times instead of 2
+    expect(ctx.arc).toHaveBeenCalledTimes(2)
   })
 
   it('draws layer output on top of the base map', () => {
