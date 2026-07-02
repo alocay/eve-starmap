@@ -1,1 +1,9 @@
-export {}
+export { StarmapRenderer } from './renderer/StarmapRenderer.js'
+export type { StarmapRendererOptions } from './renderer/StarmapRenderer.js'
+export { heatmapLayer } from './layers/heatmapLayer.js'
+export type { HeatmapLayerOptions } from './layers/heatmapLayer.js'
+export { validateUniverseData } from './dataValidation.js'
+export { createColorScale } from './colorScale.js'
+export type { ColorScaleOptions } from './colorScale.js'
+export { defaultUniverseData } from './data/defaultUniverseData.js'
+export type { UniverseData, SystemNode, StargateEdge, Layer, Viewport } from './types.js'
