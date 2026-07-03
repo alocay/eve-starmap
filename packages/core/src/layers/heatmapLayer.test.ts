@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { heatmapLayer } from './heatmapLayer.js'
+import { SYSTEM_DOT_RADIUS } from '../constants.js'
 
 function sys(id: number, x: number, y: number) {
   return { id, name: `S${id}`, constellationId: 1, regionId: 1, x, y }
@@ -55,5 +56,48 @@ describe('heatmapLayer', () => {
     layer.draw(ctx as any, viewport, systems)
 
     expect(fillStyles[0]).not.toBe(fillStyles[1])
+  })
+
+  it('uses a fixed radius for every system when radiusMin/radiusMax are not given', () => {
+    const systems = [sys(1, 0, 0), sys(2, 10, 10)]
+    const layer = heatmapLayer(new Map([[1, 0], [2, 100]]), { radius: 7 })
+    const ctx = makeMockCtx()
+
+    layer.draw(ctx as any, viewport, systems)
+
+    // world (0,0) / (10,10) -> screen (50,50) / (60,60) per worldToScreen's centering
+    expect(ctx.arc).toHaveBeenNthCalledWith(1, 50, 50, 7, 0, Math.PI * 2)
+    expect(ctx.arc).toHaveBeenNthCalledWith(2, 60, 60, 7, 0, Math.PI * 2)
+  })
+
+  it('interpolates radius alongside the value range when radiusMin/radiusMax are given', () => {
+    const systems = [sys(1, 0, 0), sys(2, 10, 10)]
+    const layer = heatmapLayer(new Map([[1, 0], [2, 100]]), { radiusMin: 2, radiusMax: 10 })
+    const ctx = makeMockCtx()
+
+    layer.draw(ctx as any, viewport, systems)
+
+    expect(ctx.arc).toHaveBeenNthCalledWith(1, 50, 50, 2, 0, Math.PI * 2)
+    expect(ctx.arc).toHaveBeenNthCalledWith(2, 60, 60, 10, 0, Math.PI * 2)
+  })
+
+  it('does not add the system dot radius by default (systemDotOnTop unset)', () => {
+    const systems = [sys(1, 0, 0)]
+    const layer = heatmapLayer(new Map([[1, 100]]), { radius: 7 })
+    const ctx = makeMockCtx()
+
+    layer.draw(ctx as any, viewport, systems)
+
+    expect(ctx.arc).toHaveBeenCalledWith(50, 50, 7, 0, Math.PI * 2)
+  })
+
+  it('adds the system dot radius when systemDotOnTop is true, to stay visible around the dot', () => {
+    const systems = [sys(1, 0, 0)]
+    const layer = heatmapLayer(new Map([[1, 100]]), { radius: 7, systemDotOnTop: true })
+    const ctx = makeMockCtx()
+
+    layer.draw(ctx as any, viewport, systems)
+
+    expect(ctx.arc).toHaveBeenCalledWith(50, 50, 7 + SYSTEM_DOT_RADIUS, 0, Math.PI * 2)
   })
 })

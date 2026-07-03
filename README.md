@@ -17,7 +17,7 @@ const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
 renderer.draw()
 ```
 
-React: see [packages/react/README.md](packages/react/README.md). Full core API: see [packages/core/README.md](packages/core/README.md).
+React: see [packages/react/README.md](packages/react/README.md) (includes multi-handler hover example). Full core API + more examples (hover behaviors, layers): see [packages/core/README.md#examples](packages/core/README.md#examples).
 
 ## Development
 

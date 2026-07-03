@@ -2,15 +2,28 @@ import type { Layer, SystemNode, UniverseData, Viewport } from '../types.js'
 import { validateUniverseData } from '../dataValidation.js'
 import { worldToScreen, screenToWorld, clampScale, getVisibleWorldBounds } from '../viewport.js'
 import { Quadtree, buildQuadtree } from '../quadtree.js'
+import { SYSTEM_DOT_RADIUS } from '../constants.js'
 
 const LOD_LABEL_SCALE_THRESHOLD = 2
 const HIT_TEST_RADIUS_PX = 10
+const FOCUS_PADDING = 0.9
+
+export type HoverHandler = (system: SystemNode | null, screenPos: { x: number; y: number } | null) => void
 
 export interface StarmapRendererOptions {
   layers?: Layer[]
-  onSystemClick?: (system: SystemNode | null) => void
-  onSystemHover?: (system: SystemNode | null) => void
+  // screenPos is canvas-relative (0,0 at the canvas's top-left corner), not
+  // page-relative -- so consumers building a tooltip can position it with
+  // plain `position: absolute` inside a `position: relative` wrapper around
+  // the canvas, no getBoundingClientRect() math needed on their end.
+  onSystemClick?: (system: SystemNode | null, screenPos: { x: number; y: number } | null) => void
+  onSystemHover?: HoverHandler
   initialViewport?: Partial<Pick<Viewport, 'offsetX' | 'offsetY' | 'scale'>>
+  // When true, the system dot (and label) draws after layers, staying visible on
+  // top of layer output (e.g. a heatmap circle) instead of being covered by it.
+  // Default false: dot draws before layers, since a dot always on top can make
+  // layer values (color/size) hard to read at a zoomed-out scale.
+  systemDotOnTop?: boolean
 }
 
 function computeBounds(systems: SystemNode[]) {
@@ -36,6 +49,7 @@ export class StarmapRenderer {
   private options: StarmapRendererOptions
   private isPanning = false
   private lastPointer = { x: 0, y: 0 }
+  private hoverHandlers = new Set<HoverHandler>()
 
   constructor(canvas: HTMLCanvasElement, data: UniverseData, options: StarmapRendererOptions = {}) {
     const ctx = canvas.getContext('2d')
@@ -55,6 +69,7 @@ export class StarmapRenderer {
       height: canvas.height,
     }
     this.quadtree = buildQuadtree(this.data.systems, computeBounds(this.data.systems))
+    if (options.onSystemHover) this.hoverHandlers.add(options.onSystemHover)
 
     this.handlePointerDown = this.handlePointerDown.bind(this)
     this.handlePointerMove = this.handlePointerMove.bind(this)
@@ -74,8 +89,53 @@ export class StarmapRenderer {
     this.draw()
   }
 
+  // Registers an additional hover handler, called on every pointermove alongside
+  // any others (including the constructor's onSystemHover). Returns a function
+  // that unregisters it, so multiple independent features (tooltip, highlight
+  // layer, side panel) can each own their own hover behavior without stomping
+  // on one another or having to merge into a single callback.
+  onHover(handler: HoverHandler): () => void {
+    this.hoverHandlers.add(handler)
+    return () => this.hoverHandlers.delete(handler)
+  }
+
   getViewport(): Viewport {
     return { ...this.viewport }
+  }
+
+  // Pans/zooms without touching whatever isn't specified -- e.g. setViewport({ scale: 2 })
+  // only changes zoom, leaving the current pan position alone.
+  setViewport(viewport: Partial<Pick<Viewport, 'offsetX' | 'offsetY' | 'scale'>>): void {
+    if (viewport.offsetX !== undefined) this.viewport.offsetX = viewport.offsetX
+    if (viewport.offsetY !== undefined) this.viewport.offsetY = viewport.offsetY
+    if (viewport.scale !== undefined) this.viewport.scale = clampScale(viewport.scale)
+    this.draw()
+  }
+
+  // Pans/zooms to fit the given systems (by id) in view, e.g. only the systems a
+  // heatmap layer has values for. IDs not present in this renderer's data, or an
+  // empty/all-unmatched list, are a no-op -- the viewport is left untouched rather
+  // than snapping to some arbitrary default.
+  focusOn(systemIds: number[]): void {
+    const systems = systemIds
+      .map(id => this.systemsById.get(id))
+      .filter((s): s is SystemNode => s != null)
+    if (systems.length === 0) return
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const s of systems) {
+      minX = Math.min(minX, s.x)
+      minY = Math.min(minY, s.y)
+      maxX = Math.max(maxX, s.x)
+      maxY = Math.max(maxY, s.y)
+    }
+    // A single system (or several at the exact same point) has zero span --
+    // fall back to 1 so the scale calculation below doesn't divide by zero.
+    const spanX = maxX - minX || 1
+    const spanY = maxY - minY || 1
+    const scale = Math.min(this.viewport.width / spanX, this.viewport.height / spanY) * FOCUS_PADDING
+
+    this.setViewport({ offsetX: (minX + maxX) / 2, offsetY: (minY + maxY) / 2, scale })
   }
 
   draw(): void {
@@ -100,18 +160,25 @@ export class StarmapRenderer {
       ctx.stroke()
     }
 
+    if (!this.options.systemDotOnTop) this.drawSystemDots(visibleSystems)
+
+    for (const layer of this.layers) {
+      layer.draw(ctx, viewport, visibleSystems)
+    }
+
+    if (this.options.systemDotOnTop) this.drawSystemDots(visibleSystems)
+  }
+
+  private drawSystemDots(visibleSystems: SystemNode[]): void {
+    const { ctx, viewport } = this
     const showLabels = viewport.scale >= LOD_LABEL_SCALE_THRESHOLD
     ctx.fillStyle = '#c8d0da'
     for (const system of visibleSystems) {
       const { x, y } = worldToScreen(viewport, system.x, system.y)
       ctx.beginPath()
-      ctx.arc(x, y, 2, 0, Math.PI * 2)
+      ctx.arc(x, y, SYSTEM_DOT_RADIUS, 0, Math.PI * 2)
       ctx.fill()
       if (showLabels) ctx.fillText(system.name, x + 4, y - 4)
-    }
-
-    for (const layer of this.layers) {
-      layer.draw(ctx, viewport, visibleSystems)
     }
   }
 
@@ -129,6 +196,15 @@ export class StarmapRenderer {
     return this.quadtree.findNearest(world.x, world.y, HIT_TEST_RADIUS_PX / this.viewport.scale)
   }
 
+  private hitTestWithScreenPos(
+    clientX: number,
+    clientY: number
+  ): [SystemNode | null, { x: number; y: number } | null] {
+    const system = this.hitTest(clientX, clientY)
+    if (!system) return [null, null]
+    return [system, worldToScreen(this.viewport, system.x, system.y)]
+  }
+
   private handlePointerDown(e: PointerEvent): void {
     this.isPanning = true
     this.lastPointer = { x: e.clientX, y: e.clientY }
@@ -144,8 +220,9 @@ export class StarmapRenderer {
       this.draw()
       return
     }
-    if (this.options.onSystemHover) {
-      this.options.onSystemHover(this.hitTest(e.clientX, e.clientY))
+    if (this.hoverHandlers.size > 0) {
+      const result = this.hitTestWithScreenPos(e.clientX, e.clientY)
+      for (const handler of this.hoverHandlers) handler(...result)
     }
   }
 
@@ -162,6 +239,6 @@ export class StarmapRenderer {
 
   private handleClick(e: MouseEvent): void {
     if (!this.options.onSystemClick) return
-    this.options.onSystemClick(this.hitTest(e.clientX, e.clientY))
+    this.options.onSystemClick(...this.hitTestWithScreenPos(e.clientX, e.clientY))
   }
 }
