@@ -22,7 +22,7 @@
     "react": "^18.0.0"
   },
   "dependencies": {
-    "eve-starmap": "*"
+    "eve-starmap": "^0.0.1"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.1",
