@@ -1,5 +1,8 @@
 # eve-starmap
 
+[![Build](https://github.com/alocay/eve-starmap/actions/workflows/build.yml/badge.svg)](https://github.com/alocay/eve-starmap/actions/workflows/build.yml)
+[![Tests](https://github.com/alocay/eve-starmap/actions/workflows/test.yml/badge.svg)](https://github.com/alocay/eve-starmap/actions/workflows/test.yml)
+
 A reusable, framework-agnostic library for rendering EVE Online's 2D starmap — from a single constellation up to the full galaxy — with a pluggable layer system (heatmaps, and more to come). Canvas 2D renderer, viewport culling + quadtree hit-testing, pan/zoom, real bundled EVE data (no API key, no runtime fetch).
 
 - `packages/core` (`eve-starmap`) — the renderer, layer system, bundled data. Framework-agnostic.
