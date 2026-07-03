@@ -41,7 +41,7 @@ unsubscribe()
 
 `screenPos` is canvas-relative, so it drops straight into `position: absolute` inside a `position: relative` wrapper around the canvas.
 
-Every registered handler (plus `onSystemHover`, if set) runs on each pointermove — none of them overwrite each other.
+Every registered handler (plus `onSystemHover`, if set) runs on each pointermove — none of them overwrite each other. They also all fire with `(null, null)` when the pointer leaves the canvas entirely, so a tooltip/highlight doesn't stay stuck on the last-hovered system after the mouse moves off the map.
 
 ## Examples
 
@@ -125,9 +125,12 @@ When `systemDotOnTop` is true, `heatmapLayer` also extends its circle by the sys
 ```js
 // e.g. zoom to fit whatever systems a heatmap has data for
 const values = new Map([[30000142, 1_500_000_000], [30000144, 800_000_000]])
-renderer.setLayers([heatmapLayer(values)])
-renderer.focusOn([...values.keys()])
+const layer = heatmapLayer(values)
+renderer.setLayers([layer])
+renderer.focusOn(layer.focusSystemIds) // == [...values.keys()], heatmapLayer sets this for you
 ```
+
+`Layer` has an optional `focusSystemIds?: number[]` property for exactly this — `heatmapLayer` fills it in automatically from its value map's keys, and any custom layer can set its own. The core renderer doesn't read it automatically (that auto-derivation lives in `eve-starmap-react`'s `EveStarmap`, see its README) — in vanilla usage, pass it to `focusOn()` yourself as above.
 
 See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search/heatmap toggle).
 

@@ -71,7 +71,7 @@ function Tooltip() {
 }
 ```
 
-Each component that wants its own hover reaction calls `mapRef.current.onHover(fn)` in its own `useEffect`, returning the unsubscribe function for cleanup on unmount -- same pattern as subscribing to any other event source in React.
+Each component that wants its own hover reaction calls `mapRef.current.onHover(fn)` in its own `useEffect`, returning the unsubscribe function for cleanup on unmount -- same pattern as subscribing to any other event source in React. Every registered handler (this one and `onSystemHover`) also fires with `(null, null)` when the pointer leaves the canvas, so hover state doesn't stay stuck after the mouse moves off the map.
 
 ## Drawing on the canvas on hover (highlight ring, label, color)
 
@@ -120,7 +120,7 @@ function App() {
 
 ## Zooming to fit a set of systems
 
-Pass `focusSystemIds` (an array of system ids) to pan/zoom the map to fit just those systems, instead of always showing the whole map -- e.g. zoom to whatever systems a heatmap has data for. It re-fits any time the array changes (new reference, same as `layers`):
+By default, you don't need to compute anything: if a layer declares `focusSystemIds` (heatmapLayer does, automatically, from its value map's keys), `EveStarmap` zooms to fit those systems on its own:
 
 ```jsx
 import { useMemo } from 'react'
@@ -129,21 +129,34 @@ import { heatmapLayer, defaultUniverseData } from 'eve-starmap'
 
 function App({ lossesBySystem }) { // Map<systemId, iskLost>
   const layers = useMemo(() => [heatmapLayer(lossesBySystem)], [lossesBySystem])
-  const focusSystemIds = useMemo(() => [...lossesBySystem.keys()], [lossesBySystem])
 
-  return (
-    <EveStarmap
-      data={defaultUniverseData}
-      layers={layers}
-      focusSystemIds={focusSystemIds}
-    />
-  )
+  // No focusSystemIds needed -- it's derived from heatmapLayer's own data,
+  // and re-fits automatically whenever lossesBySystem (and so layers) changes.
+  return <EveStarmap data={defaultUniverseData} layers={layers} />
 }
 ```
 
-Set `autoCenter={false}` to stop `focusSystemIds` changes from moving the viewport (e.g. once the user has manually panned/zoomed somewhere else and you don't want new data snapping them back). Default is `true`.
+Pass `focusSystemIds` (an array of system ids) explicitly if you want to override that derived default -- it always wins over whatever `layers` would otherwise suggest, and re-fits any time the array changes (new reference, same as `layers`):
 
-If none of the ids in `focusSystemIds` match a real system, it's a no-op -- the viewport stays as it was (or at `initialViewport`, if nothing's focused yet).
+```jsx
+<EveStarmap data={defaultUniverseData} layers={layers} focusSystemIds={[30000142, 30000144]} />
+```
+
+`autoCenter` (default `true`) is the one flag controlling whether *either* source -- explicit `focusSystemIds` or layer-derived -- is allowed to move the viewport at all. Set `autoCenter={false}` once the user has manually panned/zoomed somewhere else and you don't want new data snapping them back.
+
+If none of the resolved ids match a real system (explicit or derived), it's a no-op -- the viewport stays as it was (or at `initialViewport`, if nothing's focused yet).
+
+### Adding focus support to a custom layer
+
+Any layer can opt into this by setting a `focusSystemIds` property (`number[]`) alongside its `id`/`draw` -- it doesn't have to be a heatmap:
+
+```js
+const myLayer = {
+  id: 'alliance-systems',
+  focusSystemIds: [...allianceSystemIds],
+  draw(ctx, viewport, systems) { /* ... */ },
+}
+```
 
 ## License
 

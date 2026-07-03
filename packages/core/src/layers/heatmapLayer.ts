@@ -26,6 +26,7 @@ export function heatmapLayer(values: Map<number, number>, options: HeatmapLayerO
 
   return {
     id: 'heatmap',
+    focusSystemIds: [...values.keys()],
     draw(ctx: CanvasRenderingContext2D, viewport: Viewport, systems: SystemNode[]): void {
       for (const system of systems) {
         const value = values.get(system.id)

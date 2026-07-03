@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import { StarmapRenderer } from 'eve-starmap'
 import type { UniverseData, Layer, StarmapRendererOptions, HoverHandler } from 'eve-starmap'
 
@@ -15,10 +15,16 @@ export interface EveStarmapProps {
   // values for, so the view zooms to the relevant area instead of always
   // showing the full map. Re-fits whenever this list changes (new array
   // reference), same as the `layers` prop.
+  //
+  // If omitted, ids are derived automatically from `layers` (any layer whose
+  // `focusSystemIds` property is set, e.g. heatmapLayer's value-map keys) --
+  // so passing a heatmap layer alone is enough to get a fitted view, no
+  // separate array to compute and keep in sync yourself.
   focusSystemIds?: number[]
-  // Whether changing `focusSystemIds` re-fits the viewport. Default true.
-  // Set false to take focusSystemIds out of the auto-refit loop entirely
-  // (e.g. while the user is manually panned/zoomed somewhere else).
+  // Whether focus (explicit `focusSystemIds`, or auto-derived from `layers`)
+  // re-fits the viewport. Default true. Set false to disable auto-refit
+  // entirely -- e.g. once the user has manually panned/zoomed somewhere else
+  // and new data shouldn't snap them back.
   autoCenter?: boolean
 }
 
@@ -44,6 +50,13 @@ export const EveStarmap = forwardRef<EveStarmapHandle, EveStarmapProps>(function
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rendererRef = useRef<StarmapRenderer | null>(null)
 
+  const effectiveFocusSystemIds = useMemo(() => {
+    if (focusSystemIds) return focusSystemIds
+    if (!layers) return undefined
+    const derived = layers.flatMap(l => l.focusSystemIds ?? [])
+    return derived.length > 0 ? derived : undefined
+  }, [focusSystemIds, layers])
+
   useEffect(() => {
     if (!canvasRef.current) return
 
@@ -51,8 +64,8 @@ export const EveStarmap = forwardRef<EveStarmapHandle, EveStarmapProps>(function
     rendererRef.current = renderer
     // Fit to the initial focus (if any) before the first paint, so it doesn't
     // flash the default/full-map view before snapping to the focused area.
-    if (autoCenter && focusSystemIds && focusSystemIds.length > 0) {
-      renderer.focusOn(focusSystemIds)
+    if (autoCenter && effectiveFocusSystemIds && effectiveFocusSystemIds.length > 0) {
+      renderer.focusOn(effectiveFocusSystemIds)
     }
     renderer.draw()
 
@@ -70,10 +83,10 @@ export const EveStarmap = forwardRef<EveStarmapHandle, EveStarmapProps>(function
   }, [layers])
 
   useEffect(() => {
-    if (rendererRef.current && autoCenter && focusSystemIds && focusSystemIds.length > 0) {
-      rendererRef.current.focusOn(focusSystemIds)
+    if (rendererRef.current && autoCenter && effectiveFocusSystemIds && effectiveFocusSystemIds.length > 0) {
+      rendererRef.current.focusOn(effectiveFocusSystemIds)
     }
-  }, [focusSystemIds, autoCenter])
+  }, [effectiveFocusSystemIds, autoCenter])
 
   useImperativeHandle(ref, () => ({
     onHover: (handler: HoverHandler) => {

@@ -158,6 +158,48 @@ describe('StarmapRenderer', () => {
     expect(onSystemHover).toHaveBeenCalledWith(null, null)
   })
 
+  it('calls onSystemHover with null, null when the pointer leaves the canvas', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const onSystemHover = vi.fn()
+    new StarmapRenderer(canvas as any, sampleData, { onSystemHover })
+
+    canvas._listeners.pointermove({ clientX: 50, clientY: 50 })
+    onSystemHover.mockClear()
+    canvas._listeners.pointerleave({})
+
+    expect(onSystemHover).toHaveBeenCalledWith(null, null)
+  })
+
+  it('onHover() registered handlers also clear when the pointer leaves the canvas', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData)
+    const handler = vi.fn()
+    renderer.onHover(handler)
+
+    canvas._listeners.pointermove({ clientX: 50, clientY: 50 })
+    handler.mockClear()
+    canvas._listeners.pointerleave({})
+
+    expect(handler).toHaveBeenCalledWith(null, null)
+  })
+
+  it('stops an in-progress pan when the pointer leaves the canvas', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData)
+
+    canvas._listeners.pointerdown({ clientX: 0, clientY: 0 })
+    canvas._listeners.pointerleave({})
+    const viewportAfterLeave = renderer.getViewport()
+    canvas._listeners.pointermove({ clientX: 10, clientY: 0 })
+
+    // If panning weren't stopped, this pointermove (with no pointerdown before it)
+    // would still shift the viewport instead of triggering a hover lookup.
+    expect(renderer.getViewport().offsetX).toBe(viewportAfterLeave.offsetX)
+  })
+
   it('onHover() registers a handler invoked on every hover, independent of onSystemHover', () => {
     const ctx = makeMockCtx()
     const canvas = makeMockCanvas(ctx)

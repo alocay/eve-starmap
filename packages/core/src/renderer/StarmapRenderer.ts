@@ -74,12 +74,14 @@ export class StarmapRenderer {
     this.handlePointerDown = this.handlePointerDown.bind(this)
     this.handlePointerMove = this.handlePointerMove.bind(this)
     this.handlePointerUp = this.handlePointerUp.bind(this)
+    this.handlePointerLeave = this.handlePointerLeave.bind(this)
     this.handleWheel = this.handleWheel.bind(this)
     this.handleClick = this.handleClick.bind(this)
 
     canvas.addEventListener('pointerdown', this.handlePointerDown)
     canvas.addEventListener('pointermove', this.handlePointerMove)
     canvas.addEventListener('pointerup', this.handlePointerUp)
+    canvas.addEventListener('pointerleave', this.handlePointerLeave)
     canvas.addEventListener('wheel', this.handleWheel)
     canvas.addEventListener('click', this.handleClick)
   }
@@ -186,6 +188,7 @@ export class StarmapRenderer {
     this.canvas.removeEventListener('pointerdown', this.handlePointerDown)
     this.canvas.removeEventListener('pointermove', this.handlePointerMove)
     this.canvas.removeEventListener('pointerup', this.handlePointerUp)
+    this.canvas.removeEventListener('pointerleave', this.handlePointerLeave)
     this.canvas.removeEventListener('wheel', this.handleWheel)
     this.canvas.removeEventListener('click', this.handleClick)
   }
@@ -228,6 +231,16 @@ export class StarmapRenderer {
 
   private handlePointerUp(): void {
     this.isPanning = false
+  }
+
+  // pointermove stops firing once the pointer leaves the canvas, so without this
+  // the last hovered system (and any pan-in-progress) would stick forever instead
+  // of clearing when the mouse moves off the map.
+  private handlePointerLeave(): void {
+    this.isPanning = false
+    if (this.hoverHandlers.size > 0) {
+      for (const handler of this.hoverHandlers) handler(null, null)
+    }
   }
 
   private handleWheel(e: WheelEvent): void {

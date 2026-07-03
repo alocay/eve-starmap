@@ -101,4 +101,59 @@ describe('EveStarmap', () => {
 
     expect(mockFocusOn).toHaveBeenCalledWith([4, 5])
   })
+
+  it('derives focus ids from layers\' focusSystemIds when focusSystemIds prop is not given', () => {
+    const layers = [{ id: 'heatmap', draw: vi.fn(), focusSystemIds: [10, 20] }]
+
+    render(<EveStarmap data={sampleData as any} layers={layers} />)
+
+    expect(mockFocusOn).toHaveBeenCalledWith([10, 20])
+  })
+
+  it('merges focusSystemIds declared across multiple layers', () => {
+    const layers = [
+      { id: 'a', draw: vi.fn(), focusSystemIds: [1] },
+      { id: 'b', draw: vi.fn() }, // no focusSystemIds -- should be skipped, not throw
+      { id: 'c', draw: vi.fn(), focusSystemIds: [2, 3] },
+    ]
+
+    render(<EveStarmap data={sampleData as any} layers={layers} />)
+
+    expect(mockFocusOn).toHaveBeenCalledWith([1, 2, 3])
+  })
+
+  it('prefers an explicit focusSystemIds prop over ids derived from layers', () => {
+    const layers = [{ id: 'heatmap', draw: vi.fn(), focusSystemIds: [10, 20] }]
+
+    render(<EveStarmap data={sampleData as any} layers={layers} focusSystemIds={[99]} />)
+
+    expect(mockFocusOn).toHaveBeenCalledWith([99])
+  })
+
+  it('does not call focusOn() when no layer declares focusSystemIds', () => {
+    const layers = [{ id: 'plain', draw: vi.fn() }]
+
+    render(<EveStarmap data={sampleData as any} layers={layers} />)
+
+    expect(mockFocusOn).not.toHaveBeenCalled()
+  })
+
+  it('does not derive focus from layers when autoCenter is false', () => {
+    const layers = [{ id: 'heatmap', draw: vi.fn(), focusSystemIds: [10, 20] }]
+
+    render(<EveStarmap data={sampleData as any} layers={layers} autoCenter={false} />)
+
+    expect(mockFocusOn).not.toHaveBeenCalled()
+  })
+
+  it('re-fits when layer-derived focus ids change after mount', () => {
+    const layersA = [{ id: 'heatmap', draw: vi.fn(), focusSystemIds: [1, 2] }]
+    const layersB = [{ id: 'heatmap', draw: vi.fn(), focusSystemIds: [3, 4] }]
+    const { rerender } = render(<EveStarmap data={sampleData as any} layers={layersA} />)
+    mockFocusOn.mockClear()
+
+    rerender(<EveStarmap data={sampleData as any} layers={layersB} />)
+
+    expect(mockFocusOn).toHaveBeenCalledWith([3, 4])
+  })
 })

@@ -22,6 +22,16 @@ describe('heatmapLayer', () => {
     expect(heatmapLayer(new Map()).id).toBe('heatmap')
   })
 
+  it('exposes focusSystemIds as the value map\'s keys', () => {
+    const layer = heatmapLayer(new Map([[1, 100], [2, 200]]))
+    expect(layer.focusSystemIds).toEqual([1, 2])
+  })
+
+  it('exposes an empty focusSystemIds for an empty value map', () => {
+    const layer = heatmapLayer(new Map())
+    expect(layer.focusSystemIds).toEqual([])
+  })
+
   it('draws a filled circle for each system present in the value map', () => {
     const systems = [sys(1, 0, 0), sys(2, 10, 10)]
     const layer = heatmapLayer(new Map([[1, 100]]))
