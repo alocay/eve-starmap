@@ -30,6 +30,21 @@ export function validateUniverseData(data: unknown): UniverseData {
     }
   }
 
+  if (d.regions !== undefined) {
+    if (!Array.isArray(d.regions)) {
+      throw new Error('Invalid universe data: "regions" must be an array when present')
+    }
+    for (const region of d.regions) {
+      if (typeof region !== 'object' || region === null) {
+        throw new Error('Invalid universe data: each region must be an object')
+      }
+      const r = region as Record<string, unknown>
+      if (typeof r.id !== 'number' || typeof r.name !== 'string') {
+        throw new Error(`Invalid universe data: region is missing required fields: ${JSON.stringify(region)}`)
+      }
+    }
+  }
+
   const systemIds = new Set(d.systems.map((s: any) => s.id))
   for (const gate of d.stargates) {
     if (typeof gate !== 'object' || gate === null) {

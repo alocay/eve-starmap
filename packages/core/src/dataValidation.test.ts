@@ -49,4 +49,24 @@ describe('validateUniverseData', () => {
     const data = { systems: [validSystem], stargates: [{ fromSystemId: 1, toSystemId: 999 }] }
     expect(() => validateUniverseData(data)).toThrow('Invalid universe data: stargate references unknown system id')
   })
+
+  it('accepts data with no regions field at all', () => {
+    const data = { systems: [validSystem], stargates: [] }
+    expect(() => validateUniverseData(data)).not.toThrow()
+  })
+
+  it('accepts a valid regions array', () => {
+    const data = { systems: [validSystem], stargates: [], regions: [{ id: 100, name: 'Region One' }] }
+    expect(validateUniverseData(data)).toEqual(data)
+  })
+
+  it('throws when regions is present but not an array', () => {
+    const data = { systems: [validSystem], stargates: [], regions: 'nope' }
+    expect(() => validateUniverseData(data)).toThrow('Invalid universe data: "regions" must be an array when present')
+  })
+
+  it('throws when a region is missing required fields', () => {
+    const data = { systems: [validSystem], stargates: [], regions: [{ id: 100 }] }
+    expect(() => validateUniverseData(data)).toThrow(/region is missing required fields/)
+  })
 })

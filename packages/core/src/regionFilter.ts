@@ -15,6 +15,10 @@ export function excludeRegions(data: UniverseData, regionIds: number[]): Univers
   const stargates = data.stargates.filter(
     g => remainingIds.has(g.fromSystemId) && remainingIds.has(g.toSystemId)
   )
+  // Drop the excluded regions' own entries too, so a region-label layer built
+  // from the filtered data doesn't still show a label for a region whose
+  // systems were just excluded.
+  const regions = data.regions?.filter(r => !excluded.has(r.id))
 
-  return { systems, stargates }
+  return { systems, stargates, ...(regions !== undefined ? { regions } : {}) }
 }

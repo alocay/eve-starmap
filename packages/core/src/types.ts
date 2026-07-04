@@ -12,9 +12,18 @@ export interface StargateEdge {
   toSystemId: number
 }
 
+export interface RegionNode {
+  id: number
+  name: string
+}
+
 export interface UniverseData {
   systems: SystemNode[]
   stargates: StargateEdge[]
+  // Optional so existing callers/fixtures built before regions were tracked
+  // don't need updating -- consumers that don't care about region labels/
+  // filtering can simply omit it.
+  regions?: RegionNode[]
 }
 
 export interface Viewport {

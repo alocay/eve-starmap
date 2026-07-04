@@ -51,4 +51,20 @@ describe('excludeRegions', () => {
   it('exposes POCHVEN_REGION_ID for convenience', () => {
     expect(POCHVEN_REGION_ID).toBe(10000070)
   })
+
+  it('drops excluded regions from the regions list when present', () => {
+    const data = {
+      systems: [sys(1, 10), sys(2, 20)],
+      stargates: [],
+      regions: [{ id: 10, name: 'Region Ten' }, { id: 20, name: 'Region Twenty' }],
+    }
+    const result = excludeRegions(data, [10])
+    expect(result.regions).toEqual([{ id: 20, name: 'Region Twenty' }])
+  })
+
+  it('leaves regions undefined when the input data has no regions field', () => {
+    const data = { systems: [sys(1, 10), sys(2, 20)], stargates: [] }
+    const result = excludeRegions(data, [10])
+    expect(result.regions).toBeUndefined()
+  })
 })
