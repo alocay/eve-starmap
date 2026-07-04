@@ -12,6 +12,16 @@ describe('worldToScreen / screenToWorld', () => {
     const screen = worldToScreen(viewport, 30, -15)
     expect(screenToWorld(viewport, screen.x, screen.y)).toEqual({ x: 30, y: -15 })
   })
+
+  it('maps increasing world y to decreasing screen y, matching the in-game map orientation', () => {
+    // World y follows the SDE's position2D convention (increasing y = "up" on
+    // the in-game map). Screen y increases downward, so a system further "up"
+    // in-game must render with a smaller screen y, not a larger one -- the
+    // opposite mapping renders the whole starmap flipped along the x-axis.
+    const up = worldToScreen(viewport, 0, 10)
+    const down = worldToScreen(viewport, 0, -10)
+    expect(up.y).toBeLessThan(down.y)
+  })
 })
 
 describe('getVisibleWorldBounds', () => {

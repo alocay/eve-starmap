@@ -75,9 +75,10 @@ describe('heatmapLayer', () => {
 
     layer.draw(ctx as any, viewport, systems)
 
-    // world (0,0) / (10,10) -> screen (50,50) / (60,60) per worldToScreen's centering
+    // world (0,0) / (10,10) -> screen (50,50) / (60,40) per worldToScreen's centering
+    // (screen y is inverted relative to world y so the map matches in-game orientation).
     expect(ctx.arc).toHaveBeenNthCalledWith(1, 50, 50, 7, 0, Math.PI * 2)
-    expect(ctx.arc).toHaveBeenNthCalledWith(2, 60, 60, 7, 0, Math.PI * 2)
+    expect(ctx.arc).toHaveBeenNthCalledWith(2, 60, 40, 7, 0, Math.PI * 2)
   })
 
   it('interpolates radius alongside the value range when radiusMin/radiusMax are given', () => {
@@ -88,7 +89,7 @@ describe('heatmapLayer', () => {
     layer.draw(ctx as any, viewport, systems)
 
     expect(ctx.arc).toHaveBeenNthCalledWith(1, 50, 50, 2, 0, Math.PI * 2)
-    expect(ctx.arc).toHaveBeenNthCalledWith(2, 60, 60, 10, 0, Math.PI * 2)
+    expect(ctx.arc).toHaveBeenNthCalledWith(2, 60, 40, 10, 0, Math.PI * 2)
   })
 
   it('does not add the system dot radius by default (systemDotOnTop unset)', () => {
