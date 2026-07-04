@@ -158,6 +158,47 @@ const myLayer = {
 }
 ```
 
+## Region labels
+
+`regionLabelLayer` (bundled in `eve-starmap`) works the same way through `EveStarmap`'s generic `layers` prop -- there's no React-specific wiring needed, since a `Layer` object is a `Layer` object regardless of where it's constructed:
+
+```jsx
+import { useMemo } from 'react'
+import { EveStarmap } from 'eve-starmap-react'
+import { regionLabelLayer, defaultUniverseData } from 'eve-starmap'
+
+function App() {
+  const layers = useMemo(
+    () => [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)],
+    []
+  )
+
+  return <EveStarmap data={defaultUniverseData} layers={layers} />
+}
+```
+
+To toggle labels reactively (e.g. a checkbox), pass state into the `visible` option and re-memoize on it -- either this or omitting the layer from `layers` entirely both work equally well:
+
+```jsx
+function App() {
+  const [showRegions, setShowRegions] = useState(true)
+
+  const layers = useMemo(
+    () => [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems, { visible: showRegions })],
+    [showRegions]
+  )
+
+  return (
+    <>
+      <button onClick={() => setShowRegions(v => !v)}>Toggle regions</button>
+      <EveStarmap data={defaultUniverseData} layers={layers} />
+    </>
+  )
+}
+```
+
+See [`packages/core/README.md`](../core/README.md#examples) for the full list of `regionLabelLayer` options (`color`, `opacity`, `fontSize`, `font`).
+
 ## License
 
 MIT

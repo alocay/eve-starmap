@@ -3,7 +3,7 @@
 [![Build](https://github.com/alocay/eve-starmap/actions/workflows/build.yml/badge.svg)](https://github.com/alocay/eve-starmap/actions/workflows/build.yml)
 [![Tests](https://github.com/alocay/eve-starmap/actions/workflows/test.yml/badge.svg)](https://github.com/alocay/eve-starmap/actions/workflows/test.yml)
 
-A reusable, framework-agnostic library for rendering EVE Online's 2D starmap — from a single constellation up to the full galaxy — with a pluggable layer system (heatmaps, and more to come). Canvas 2D renderer, viewport culling + quadtree hit-testing, pan/zoom, real bundled EVE data (no API key, no runtime fetch).
+A reusable, framework-agnostic library for rendering EVE Online's 2D starmap — from a single constellation up to the full galaxy — with a pluggable layer system (heatmaps, region labels, and more to come). Canvas 2D renderer, viewport culling + quadtree hit-testing, pan/zoom, real bundled EVE data (no API key, no runtime fetch).
 
 - `packages/core` (`eve-starmap`) — the renderer, layer system, bundled data. Framework-agnostic.
 - `packages/react` (`eve-starmap-react`) — thin `<EveStarmap/>` wrapper.
@@ -39,7 +39,7 @@ interface Layer {
 - Layers draw in array order, and by default all of them draw *above* the base system dots (set `systemDotOnTop: true` on the renderer/`EveStarmap` to flip that, e.g. so a heatmap circle doesn't fully hide the dot underneath it).
 - `focusSystemIds` is optional: if set, it tells the renderer/`EveStarmap` which systems this layer cares about, so the view can auto-fit to them (`renderer.focusOn(...)` in core, or automatically via the `EveStarmap` `layers` prop -- see its README). `heatmapLayer` sets this for you from its value map's keys; a custom layer can set its own.
 
-`heatmapLayer` (bundled) is the only layer shipped today; writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring).
+Two layers are bundled today: `heatmapLayer` (per-system value visualization) and `regionLabelLayer` (draws each region's name at the centroid of its member systems). Writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring) and the bundled layers' own examples.
 
 ## Development
 
@@ -51,7 +51,7 @@ npm run build      # tsup, all packages
 
 ## Manual tools
 
-- **Playground** (`playground/`) — interactive hands-on testing: real pan/zoom/click/hover, system search, heatmap toggle. Serve from repo root (e.g. `npx serve .`) and open `/playground/index.html`.
+- **Playground** (`playground/`) — interactive hands-on testing: real pan/zoom/click/hover, system search, heatmap/region-label toggles. Serve from repo root (e.g. `npx serve .`) and open `/playground/index.html`.
 - **Perf benchmark** (`benchmark/`) — simulated full-galaxy pan/zoom with a live FPS readout, for checking the 30fps target. Same serving approach, open `/benchmark/index.html`.
 - **Regenerating bundled data** — `node scripts/build-universe-data.js` refreshes `packages/core/src/data/defaultUniverseData.ts` from a live SDE mirror. Real data is already bundled; only needed to pick up a newer SDE release.
 

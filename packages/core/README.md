@@ -102,6 +102,32 @@ heatmapLayer(values, {
 })
 ```
 
+**Region labels** (bundled): draws each region's name at the centroid of its member systems -- regions have no 2D-projected position of their own in the SDE, only systems do, so this is computed from `defaultUniverseData.systems` rather than stored directly:
+
+```js
+import { StarmapRenderer, regionLabelLayer, defaultUniverseData } from 'eve-starmap'
+
+const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
+  layers: [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)],
+})
+renderer.draw()
+```
+
+`regionLabelLayer` options:
+
+- `color` -- label color (default `'#e8a33d'`, an amber distinct from the near-white system dots and grey stargate lines -- a color too close to those blends in at a glance).
+- `opacity` -- default `1` (fully opaque).
+- `fontSize` / `font` -- default `14` / `'sans-serif'`.
+- `visible` -- default `true`. Toggle labels on/off without touching the renderer's `layers` array (omitting the layer from that array works too -- this is just a more convenient knob when the layer instance is already memoized/stable elsewhere).
+
+```js
+regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems, {
+  color: '#8ecbe8',
+  opacity: 0.6,
+  visible: showRegionLabels,
+})
+```
+
 ## System dot stacking order
 
 By default, the base system dot (and its label) draws *before* layers, so a layer like `heatmapLayer` fully covers it — this keeps values readable when zoomed out, since a dot always on top of a shrunk heatmap circle would obscure it. Set `systemDotOnTop: true` (on both the renderer and, if using `heatmapLayer`, the layer itself) to flip that — the dot stays visible above layer output instead:
@@ -132,7 +158,7 @@ renderer.focusOn(layer.focusSystemIds) // == [...values.keys()], heatmapLayer se
 
 `Layer` has an optional `focusSystemIds?: number[]` property for exactly this — `heatmapLayer` fills it in automatically from its value map's keys, and any custom layer can set its own. The core renderer doesn't read it automatically (that auto-derivation lives in `eve-starmap-react`'s `EveStarmap`, see its README) — in vanilla usage, pass it to `focusOn()` yourself as above.
 
-See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search/heatmap toggle).
+See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search/heatmap+region-label toggles).
 
 ## License
 
