@@ -11,8 +11,11 @@ function makeMockCtx() {
     arc: vi.fn(),
     fill: vi.fn(),
     fillText: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
+    globalAlpha: 1,
   }
 }
 
@@ -112,6 +115,55 @@ describe('StarmapRenderer', () => {
 
     expect(order[0]).toBe('layer')
     expect(order[order.length - 1]).toBe('dot')
+  })
+
+  it('uses the default system dot radius, color, and full opacity when unset', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData)
+
+    renderer.draw()
+
+    expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 2, 0, Math.PI * 2)
+    expect(ctx.fillStyle).toBe('#c8d0da')
+    expect(ctx.globalAlpha).toBe(1)
+  })
+
+  it('honors custom systemDotRadius, systemDotColor, and systemDotOpacity from construction', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData, {
+      systemDotRadius: 6, systemDotColor: '#ff00ff', systemDotOpacity: 0.3,
+    })
+
+    renderer.draw()
+
+    expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 6, 0, Math.PI * 2)
+    expect(ctx.fillStyle).toBe('#ff00ff')
+    expect(ctx.globalAlpha).toBe(0.3)
+  })
+
+  it('updates system dot style live via setSystemDotStyle without touching unspecified fields', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData, { systemDotColor: '#111111' })
+
+    renderer.setSystemDotStyle({ systemDotOpacity: 0.5 })
+    renderer.draw()
+
+    expect(ctx.fillStyle).toBe('#111111')
+    expect(ctx.globalAlpha).toBe(0.5)
+  })
+
+  it('restores the canvas context state after drawing system dots (save/restore)', () => {
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData, { systemDotOpacity: 0.5 })
+
+    renderer.draw()
+
+    expect(ctx.save).toHaveBeenCalled()
+    expect(ctx.restore).toHaveBeenCalled()
   })
 
   it('calls onSystemClick with the nearest system within the hit-test radius', () => {
@@ -251,6 +303,23 @@ describe('StarmapRenderer', () => {
     canvas._listeners.pointermove({ clientX: 10, clientY: 0 })
 
     expect(renderer.getViewport().offsetX).toBeLessThan(0)
+  })
+
+  it('dragging downward pans the map content downward (content follows the cursor), not the reverse', () => {
+    // Regression test: screen y is inverted relative to world y (worldToScreen
+    // negates it), so offsetY's drag delta must be applied with the opposite
+    // sign from offsetX's, or a downward drag would pan the map upward.
+    const ctx = makeMockCtx()
+    const canvas = makeMockCanvas(ctx)
+    const renderer = new StarmapRenderer(canvas as any, sampleData)
+
+    canvas._listeners.pointerdown({ clientX: 0, clientY: 0 })
+    canvas._listeners.pointermove({ clientX: 0, clientY: 10 })
+
+    // offsetY increasing means a fixed world point's screen y increases
+    // (moves down, per worldToScreen's h/2 - (y-offsetY)*scale), i.e. content
+    // moved down along with the downward drag.
+    expect(renderer.getViewport().offsetY).toBeGreaterThan(0)
   })
 
   it('zooms the viewport on wheel', () => {

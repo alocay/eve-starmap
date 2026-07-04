@@ -111,4 +111,14 @@ describe('heatmapLayer', () => {
 
     expect(ctx.arc).toHaveBeenCalledWith(50, 50, 7 + SYSTEM_DOT_RADIUS, 0, Math.PI * 2)
   })
+
+  it('uses a custom systemDotRadius (matching a customized renderer dot size) instead of the default', () => {
+    const systems = [sys(1, 0, 0)]
+    const layer = heatmapLayer(new Map([[1, 100]]), { radius: 7, systemDotOnTop: true, systemDotRadius: 10 })
+    const ctx = makeMockCtx()
+
+    layer.draw(ctx as any, viewport, systems)
+
+    expect(ctx.arc).toHaveBeenCalledWith(50, 50, 17, 0, Math.PI * 2)
+  })
 })

@@ -24,6 +24,14 @@ export interface StarmapRendererOptions {
   // Default false: dot draws before layers, since a dot always on top can make
   // layer values (color/size) hard to read at a zoomed-out scale.
   systemDotOnTop?: boolean
+  // Radius (px), fill color, and opacity of the base system dot (and its name
+  // label, which shares the dot's styling). Defaults preserve the existing
+  // look: SYSTEM_DOT_RADIUS, '#c8d0da', fully opaque. Dense clusters at the
+  // default near-white color/full brightness can read as a glowing blob with
+  // little depth -- dimming color/opacity or shrinking radius can help.
+  systemDotRadius?: number
+  systemDotColor?: string
+  systemDotOpacity?: number
 }
 
 function computeBounds(systems: SystemNode[]) {
@@ -88,6 +96,17 @@ export class StarmapRenderer {
 
   setLayers(layers: Layer[]): void {
     this.layers = layers
+    this.draw()
+  }
+
+  // Updates system dot radius/color/opacity without touching whatever isn't
+  // specified, same partial-update shape as setViewport. Unlike systemDotOnTop
+  // (a draw-order choice fixed at construction), these are appearance-only
+  // and safe to change live -- e.g. wiring a color/opacity control.
+  setSystemDotStyle(style: Partial<Pick<StarmapRendererOptions, 'systemDotRadius' | 'systemDotColor' | 'systemDotOpacity'>>): void {
+    if (style.systemDotRadius !== undefined) this.options.systemDotRadius = style.systemDotRadius
+    if (style.systemDotColor !== undefined) this.options.systemDotColor = style.systemDotColor
+    if (style.systemDotOpacity !== undefined) this.options.systemDotOpacity = style.systemDotOpacity
     this.draw()
   }
 
@@ -174,14 +193,18 @@ export class StarmapRenderer {
   private drawSystemDots(visibleSystems: SystemNode[]): void {
     const { ctx, viewport } = this
     const showLabels = viewport.scale >= LOD_LABEL_SCALE_THRESHOLD
-    ctx.fillStyle = '#c8d0da'
+    const radius = this.options.systemDotRadius ?? SYSTEM_DOT_RADIUS
+    ctx.save()
+    ctx.globalAlpha = this.options.systemDotOpacity ?? 1
+    ctx.fillStyle = this.options.systemDotColor ?? '#c8d0da'
     for (const system of visibleSystems) {
       const { x, y } = worldToScreen(viewport, system.x, system.y)
       ctx.beginPath()
-      ctx.arc(x, y, SYSTEM_DOT_RADIUS, 0, Math.PI * 2)
+      ctx.arc(x, y, radius, 0, Math.PI * 2)
       ctx.fill()
       if (showLabels) ctx.fillText(system.name, x + 4, y - 4)
     }
+    ctx.restore()
   }
 
   destroy(): void {
@@ -218,7 +241,10 @@ export class StarmapRenderer {
       const dx = (e.clientX - this.lastPointer.x) / this.viewport.scale
       const dy = (e.clientY - this.lastPointer.y) / this.viewport.scale
       this.viewport.offsetX -= dx
-      this.viewport.offsetY -= dy
+      // Screen y is inverted relative to world y (see worldToScreen), so a
+      // downward drag (positive dy) must increase offsetY, not decrease it --
+      // otherwise the map pans opposite to the drag direction.
+      this.viewport.offsetY += dy
       this.lastPointer = { x: e.clientX, y: e.clientY }
       this.draw()
       return

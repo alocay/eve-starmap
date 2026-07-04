@@ -8,6 +8,7 @@ const mockDestroy = vi.fn()
 const mockSetLayers = vi.fn()
 const mockOnHover = vi.fn()
 const mockFocusOn = vi.fn()
+const mockSetSystemDotStyle = vi.fn()
 
 vi.mock('eve-starmap', () => ({
   StarmapRenderer: vi.fn().mockImplementation(() => ({
@@ -16,6 +17,7 @@ vi.mock('eve-starmap', () => ({
     setLayers: mockSetLayers,
     onHover: mockOnHover,
     focusOn: mockFocusOn,
+    setSystemDotStyle: mockSetSystemDotStyle,
   })),
 }))
 
@@ -62,6 +64,25 @@ describe('EveStarmap', () => {
 
     expect((StarmapRenderer as any).mock.calls[0][2]).toEqual(
       expect.objectContaining({ initialViewport })
+    )
+  })
+
+  it('passes systemDotRadius/Color/Opacity through to the StarmapRenderer constructor', () => {
+    render(<EveStarmap data={sampleData as any} systemDotRadius={6} systemDotColor="#ff00ff" systemDotOpacity={0.5} />)
+
+    expect((StarmapRenderer as any).mock.calls[0][2]).toEqual(
+      expect.objectContaining({ systemDotRadius: 6, systemDotColor: '#ff00ff', systemDotOpacity: 0.5 })
+    )
+  })
+
+  it('calls setSystemDotStyle when systemDotColor changes after mount', () => {
+    const { rerender } = render(<EveStarmap data={sampleData as any} systemDotColor="#111111" />)
+    mockSetSystemDotStyle.mockClear()
+
+    rerender(<EveStarmap data={sampleData as any} systemDotColor="#222222" />)
+
+    expect(mockSetSystemDotStyle).toHaveBeenCalledWith(
+      expect.objectContaining({ systemDotColor: '#222222' })
     )
   })
 

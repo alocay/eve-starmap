@@ -11,6 +11,13 @@ export interface EveStarmapProps {
   height?: number
   initialViewport?: StarmapRendererOptions['initialViewport']
   systemDotOnTop?: StarmapRendererOptions['systemDotOnTop']
+  // Radius/color/opacity of the base system dot. Unlike systemDotOnTop
+  // (fixed at construction, a draw-order choice), these three are safe to
+  // change after mount -- e.g. wiring a live color or opacity control -- and
+  // take effect via StarmapRenderer.setSystemDotStyle whenever they change.
+  systemDotRadius?: StarmapRendererOptions['systemDotRadius']
+  systemDotColor?: StarmapRendererOptions['systemDotColor']
+  systemDotOpacity?: StarmapRendererOptions['systemDotOpacity']
   // System ids to pan/zoom to fit -- e.g. only the systems a heatmap layer has
   // values for, so the view zooms to the relevant area instead of always
   // showing the full map. Re-fits whenever this list changes (new array
@@ -44,6 +51,9 @@ export const EveStarmap = forwardRef<EveStarmapHandle, EveStarmapProps>(function
   height = 600,
   initialViewport,
   systemDotOnTop,
+  systemDotRadius,
+  systemDotColor,
+  systemDotOpacity,
   focusSystemIds,
   autoCenter = true,
 }, ref) {
@@ -60,7 +70,10 @@ export const EveStarmap = forwardRef<EveStarmapHandle, EveStarmapProps>(function
   useEffect(() => {
     if (!canvasRef.current) return
 
-    const renderer = new StarmapRenderer(canvasRef.current, data, { layers, onSystemClick, onSystemHover, initialViewport, systemDotOnTop })
+    const renderer = new StarmapRenderer(canvasRef.current, data, {
+      layers, onSystemClick, onSystemHover, initialViewport, systemDotOnTop,
+      systemDotRadius, systemDotColor, systemDotOpacity,
+    })
     rendererRef.current = renderer
     // Fit to the initial focus (if any) before the first paint, so it doesn't
     // flash the default/full-map view before snapping to the focused area.
@@ -81,6 +94,12 @@ export const EveStarmap = forwardRef<EveStarmapHandle, EveStarmapProps>(function
       rendererRef.current.setLayers(layers)
     }
   }, [layers])
+
+  useEffect(() => {
+    if (rendererRef.current) {
+      rendererRef.current.setSystemDotStyle({ systemDotRadius, systemDotColor, systemDotOpacity })
+    }
+  }, [systemDotRadius, systemDotColor, systemDotOpacity])
 
   useEffect(() => {
     if (rendererRef.current && autoCenter && effectiveFocusSystemIds && effectiveFocusSystemIds.length > 0) {

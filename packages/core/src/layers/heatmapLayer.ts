@@ -11,6 +11,11 @@ export interface HeatmapLayerOptions extends ColorScaleOptions {
   // dot draws on top of this layer, so the circle must extend past the dot's
   // own radius or it gets fully hidden underneath it. Default false.
   systemDotOnTop?: boolean
+  // Match this to the renderer's own `systemDotRadius` if it was customized --
+  // otherwise the "extend past the dot" math above uses the wrong radius and
+  // the dot can still poke out past this layer's circle. Defaults to the same
+  // SYSTEM_DOT_RADIUS the renderer itself defaults to.
+  systemDotRadius?: number
 }
 
 export function heatmapLayer(values: Map<number, number>, options: HeatmapLayerOptions = {}): Layer {
@@ -22,7 +27,7 @@ export function heatmapLayer(values: Map<number, number>, options: HeatmapLayerO
   const radiusMax = options.radiusMax ?? defaultRadius
   const hasRadiusRange = radiusMin !== radiusMax
   const radiusScale = hasRadiusRange ? createValueScale(rawValues, options) : null
-  const dotOffset = options.systemDotOnTop ? SYSTEM_DOT_RADIUS : 0
+  const dotOffset = options.systemDotOnTop ? (options.systemDotRadius ?? SYSTEM_DOT_RADIUS) : 0
 
   return {
     id: 'heatmap',
