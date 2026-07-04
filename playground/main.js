@@ -1,9 +1,10 @@
-import { StarmapRenderer, heatmapLayer, defaultUniverseData } from '../packages/core/dist/index.js'
+import { StarmapRenderer, heatmapLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
 
 const canvas = document.getElementById('map')
 const hoveredEl = document.getElementById('hovered')
 const clickedEl = document.getElementById('clicked')
 const toggleBtn = document.getElementById('toggle-heatmap')
+const toggleRegionsBtn = document.getElementById('toggle-regions')
 const searchInput = document.getElementById('search-input')
 const suggestionsEl = document.getElementById('suggestions')
 const tooltipEl = document.getElementById('tooltip')
@@ -40,7 +41,9 @@ function buildDemoHeatmap(systems, count) {
 }
 
 const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
+const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 let heatmapOn = false
+let regionsOn = false
 let highlightedSystemId = null
 
 // Draws a ring around the searched system, using the same public Layer
@@ -51,8 +54,10 @@ const highlightLayer = {
     if (highlightedSystemId == null) return
     const system = systems.find(s => s.id === highlightedSystemId)
     if (!system) return
+    // Mirrors worldToScreen's transform (screen y is inverted relative to
+    // world y so the map matches the in-game orientation).
     const x = (system.x - viewport.offsetX) * viewport.scale + viewport.width / 2
-    const y = (system.y - viewport.offsetY) * viewport.scale + viewport.height / 2
+    const y = viewport.height / 2 - (system.y - viewport.offsetY) * viewport.scale
     ctx.beginPath()
     ctx.arc(x, y, 10, 0, Math.PI * 2)
     ctx.strokeStyle = '#ff5c33'
@@ -62,7 +67,10 @@ const highlightLayer = {
 }
 
 function updateLayers() {
-  renderer.setLayers(heatmapOn ? [highlightLayer, demoHeatmapLayer] : [highlightLayer])
+  const layers = [highlightLayer]
+  if (regionsOn) layers.push(demoRegionLabelLayer)
+  if (heatmapOn) layers.push(demoHeatmapLayer)
+  renderer.setLayers(layers)
 }
 
 // Screen position (viewport-relative, not page-relative) of a system's
@@ -73,7 +81,7 @@ function screenPosFor(system) {
   const rect = canvas.getBoundingClientRect()
   return {
     x: rect.left + (system.x - v.offsetX) * v.scale + v.width / 2,
-    y: rect.top + (system.y - v.offsetY) * v.scale + v.height / 2,
+    y: rect.top + v.height / 2 - (system.y - v.offsetY) * v.scale,
   }
 }
 
@@ -83,6 +91,10 @@ function hideTooltip() {
 
 const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
   layers: [highlightLayer],
+  // Dimmer than the '#c8d0da' default -- at full brightness, dense clusters
+  // read as a glowing blob with no depth and compete with anything drawn on
+  // top of them (region labels included).
+  systemDotColor: '#8a99aa',
   initialViewport: {
     scale: fitScale,
     offsetX: (bounds.minX + bounds.maxX) / 2,
@@ -119,6 +131,12 @@ toggleBtn.addEventListener('click', () => {
   toggleBtn.textContent = heatmapOn ? 'Hide heatmap layer' : 'Toggle heatmap layer'
 })
 
+toggleRegionsBtn.addEventListener('click', () => {
+  regionsOn = !regionsOn
+  updateLayers()
+  toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
+})
+
 // StarmapRenderer has no direct "pan/zoom to" API -- it only changes its
 // viewport in response to real pointer/wheel events. Drive it the same way
 // the perf benchmark does: dispatch real synthetic events on the canvas so
@@ -131,7 +149,10 @@ function jumpToSystem(system) {
 
   canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX: cx, clientY: cy, bubbles: true }))
   const targetClientX = cx + (before.offsetX - system.x) * before.scale
-  const targetClientY = cy + (before.offsetY - system.y) * before.scale
+  // offsetY's drag delta has the opposite sign from offsetX's (see
+  // StarmapRenderer's handlePointerMove -- screen y is inverted relative to
+  // world y), so this target must be derived with the opposite sign too.
+  const targetClientY = cy + (system.y - before.offsetY) * before.scale
   canvas.dispatchEvent(new PointerEvent('pointermove', { clientX: targetClientX, clientY: targetClientY, bubbles: true }))
   canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
 
