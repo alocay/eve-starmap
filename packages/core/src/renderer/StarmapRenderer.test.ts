@@ -125,7 +125,7 @@ describe('StarmapRenderer', () => {
     renderer.draw()
 
     expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 2, 0, Math.PI * 2)
-    expect(ctx.fillStyle).toBe('#c8d0da')
+    expect(ctx.fillStyle).toBe('#8a99aa')
     expect(ctx.globalAlpha).toBe(1)
   })
 

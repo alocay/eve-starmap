@@ -25,10 +25,9 @@ export interface StarmapRendererOptions {
   // layer values (color/size) hard to read at a zoomed-out scale.
   systemDotOnTop?: boolean
   // Radius (px), fill color, and opacity of the base system dot (and its name
-  // label, which shares the dot's styling). Defaults preserve the existing
-  // look: SYSTEM_DOT_RADIUS, '#c8d0da', fully opaque. Dense clusters at the
-  // default near-white color/full brightness can read as a glowing blob with
-  // little depth -- dimming color/opacity or shrinking radius can help.
+  // label, which shares the dot's styling). Default color is a dimmed
+  // grey-blue rather than near-white -- at full brightness, dense clusters
+  // read as a glowing blob with little depth.
   systemDotRadius?: number
   systemDotColor?: string
   systemDotOpacity?: number
@@ -196,7 +195,7 @@ export class StarmapRenderer {
     const radius = this.options.systemDotRadius ?? SYSTEM_DOT_RADIUS
     ctx.save()
     ctx.globalAlpha = this.options.systemDotOpacity ?? 1
-    ctx.fillStyle = this.options.systemDotColor ?? '#c8d0da'
+    ctx.fillStyle = this.options.systemDotColor ?? '#8a99aa'
     for (const system of visibleSystems) {
       const { x, y } = worldToScreen(viewport, system.x, system.y)
       ctx.beginPath()
