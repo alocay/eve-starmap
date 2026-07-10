@@ -3,11 +3,13 @@
 Framework-agnostic Canvas 2D renderer for EVE Online's 2D starmap — from a single constellation up to the full galaxy — with a pluggable layer system.
 
 ## Install
-
+```
 npm install eve-starmap
+```
 
 ## Usage
 
+```js
 import { StarmapRenderer, heatmapLayer, defaultUniverseData } from 'eve-starmap'
 
 const canvas = document.querySelector('canvas')
@@ -16,6 +18,7 @@ const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
   onSystemClick: (system) => console.log(system),
 })
 renderer.draw()
+```
 
 ## Custom data
 

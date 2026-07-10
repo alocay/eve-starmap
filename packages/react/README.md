@@ -3,11 +3,11 @@
 React wrapper for [eve-starmap](https://www.npmjs.com/package/eve-starmap).
 
 ## Install
-
+```
 npm install eve-starmap-react eve-starmap react
-
+```
 ## Usage
-
+```js
 import { EveStarmap } from 'eve-starmap-react'
 import { heatmapLayer, defaultUniverseData } from 'eve-starmap'
 
@@ -20,6 +20,7 @@ function App() {
     />
   )
 }
+```
 
 ## Hover (simple case)
 
