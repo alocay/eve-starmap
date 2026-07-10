@@ -1,6 +1,6 @@
 {
   "name": "eve-starmap",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Framework-agnostic Canvas 2D renderer for EVE Online's 2D starmap, with a pluggable layer system.",
   "repository": {
     "type": "git",
@@ -19,7 +19,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup"
   },
