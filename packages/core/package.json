@@ -2,6 +2,11 @@
   "name": "eve-starmap",
   "version": "0.0.3",
   "description": "Framework-agnostic Canvas 2D renderer for EVE Online's 2D starmap, with a pluggable layer system.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alocay/eve-starmap.git",
+    "directory": "packages/core"
+  },
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",

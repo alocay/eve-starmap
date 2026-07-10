@@ -6,6 +6,10 @@
   "workspaces": [
     "packages/*"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alocay/eve-starmap.git"
+  },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run"
