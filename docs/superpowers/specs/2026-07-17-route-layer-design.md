@@ -102,19 +102,23 @@ from a cached ESI result or a custom source) directly to `routeLayer`.
 ## Component 3 — `routeLayer`
 
 ```ts
+export type RouteColorFn = (system: SystemNode, security: number | undefined) => string
+
 export interface RouteLayerOptions {
-  // Consumer-supplied tier colors. Keys are display tiers (1.0 .. 0.0 and
-  // negatives); accepts a Record with string keys ("0.5") or a Map<number,string>.
-  securityColors: Record<string, string> | Map<number, string>
-  lineWidth?: number        // default 2
-  endpointMarkers?: boolean // draw a dot at origin + destination, default true
-  missingColor?: string     // color when a system's sec is unknown but coords exist
+  // Tier colors. Keys are display tiers ("1.0".."0.0"; anything <= 0.0 clamps to
+  // the 0.0 color). Accepts a Record or Map<number,string>. Defaults to the
+  // bundled defaultSecurityColors. Ignored when colorForNode is provided.
+  securityColors?: Record<string, string> | Map<number, string>
+  colorForNode?: RouteColorFn // per-node color override; wins over securityColors
+  lineWidth?: number          // default 2
+  endpointMarkers?: boolean   // draw a dot at origin + destination, default true
+  missingColor?: string       // color when a system's sec is unknown but coords exist
 }
 
 export function routeLayer(
   systemIds: number[],
   universeData: UniverseData,
-  options: RouteLayerOptions,
+  options?: RouteLayerOptions,
 ): Layer
 ```
 
@@ -123,8 +127,9 @@ Construction:
 - Build an `id -> SystemNode` map once from `universeData.systems`. The layer
   needs the **full** system set (not the culled `visibleSystems` passed to
   `draw`), because a route routinely spans beyond the viewport.
-- Normalize `securityColors` into a single lookup function
-  `tierColor(tier: number): string`.
+- Normalize `securityColors` (defaulting to `defaultSecurityColors`) into a
+  single lookup `tierColor(security): string`. When `colorForNode` is provided,
+  it replaces this lookup for every node.
 - Set `focusSystemIds = systemIds` so the renderer / `<EveStarmap>` can
   auto-fit the view to the route.
 
@@ -136,8 +141,8 @@ Construction:
     abyssal id not in bundled data), **break the polyline**: draw no segment
     across the gap.
   - Otherwise compute both screen positions via `worldToScreen(viewport, ...)`.
-  - Determine each endpoint's color:
-    `color = system.security == null ? missingColor : tierColor(round1(security))`.
+  - Determine each endpoint's color via `colorForNode(system, security)` if set,
+    else `system.security == null ? missingColor : tierColor(round1(security))`.
   - Build `ctx.createLinearGradient(x1, y1, x2, y2)` with stop 0 = X color,
     stop 1 = Y color. Stroke the segment with `lineWidth`.
 - After drawing legs, if `endpointMarkers`, draw a dot at the origin and
@@ -146,8 +151,11 @@ Construction:
 ### Security → tier → color
 
 - `round1(sec) = Math.round(sec * 10) / 10`.
-- Negative sec values clamp to the lowest key present in `securityColors`
-  (null/low sec commonly share red tiers in the consumer's palette).
+- The bundled `defaultSecurityColors` palette (EVE's tiers): 1.0 `#2c74e0`,
+  0.9 `#3999e9`, 0.8 `#4dccf6`, 0.7 `#60d9a3`, 0.6 `#71e554`, 0.5 `#f3fd82`,
+  0.4 `#da6c07`, 0.3 `#cc440f`, 0.2 `#ba1117`, 0.1 `#722020`, 0.0 `#8c3263`.
+- Negative sec values clamp to the lowest key present (0.0 in the default
+  palette), so all low/null-sec systems share the 0.0 color.
 - Lookup is tolerant of numeric (`0.5`) and string (`"0.5"`) keys.
 - If a rounded tier has no matching key, fall back to `missingColor`.
 
@@ -169,7 +177,8 @@ Add to `packages/core/src/index.ts`:
 
 - `fetchRoute`
 - `routeLayer`
-- types: `RouteFlag`, `FetchRouteOptions`, `RouteLayerOptions`
+- `defaultSecurityColors`, `createSecurityColorLookup`, `round1`
+- types: `RouteFlag`, `FetchRouteOptions`, `RouteLayerOptions`, `RouteColorFn`, `SecurityColors`
 - `SystemNode` already exported — now carries optional `security`.
 
 ## Testing (vitest, matching existing suite)
