@@ -110,6 +110,8 @@ export interface RouteLayerOptions {
   // bundled defaultSecurityColors. Ignored when colorForNode is provided.
   securityColors?: Record<string, string> | Map<number, string>
   colorForNode?: RouteColorFn // per-node color override; wins over securityColors
+  gradient?: boolean          // blend each leg start->end; default true. false =
+                              // solid leg in the start node's color.
   lineWidth?: number          // default 2
   endpointMarkers?: boolean   // draw a dot at origin + destination, default true
   missingColor?: string       // color when a system's sec is unknown but coords exist
@@ -143,8 +145,9 @@ Construction:
   - Otherwise compute both screen positions via `worldToScreen(viewport, ...)`.
   - Determine each endpoint's color via `colorForNode(system, security)` if set,
     else `system.security == null ? missingColor : tierColor(round1(security))`.
-  - Build `ctx.createLinearGradient(x1, y1, x2, y2)` with stop 0 = X color,
-    stop 1 = Y color. Stroke the segment with `lineWidth`.
+  - If `gradient` (default): build `ctx.createLinearGradient(x1, y1, x2, y2)`
+    with stop 0 = X color, stop 1 = Y color. If `gradient: false`: stroke solid
+    with X's color (start node color runs the whole leg). Stroke with `lineWidth`.
 - After drawing legs, if `endpointMarkers`, draw a dot at the origin and
   destination screen positions.
 

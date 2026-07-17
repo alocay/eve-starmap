@@ -432,7 +432,7 @@ git commit -m "feat: add fetchRoute ESI helper"
   - `Layer`, `SystemNode`, `UniverseData`, `Viewport` from `../types.js`
 - Produces:
   - `type RouteColorFn = (system: SystemNode, security: number | undefined) => string`
-  - `interface RouteLayerOptions { securityColors?: SecurityColors; colorForNode?: RouteColorFn; lineWidth?: number; endpointMarkers?: boolean; missingColor?: string }`
+  - `interface RouteLayerOptions { securityColors?: SecurityColors; colorForNode?: RouteColorFn; gradient?: boolean; lineWidth?: number; endpointMarkers?: boolean; missingColor?: string }`
   - `routeLayer(systemIds: number[], universeData: UniverseData, options?: RouteLayerOptions): Layer`
 
 - [ ] **Step 1: Write the failing test**
@@ -545,6 +545,16 @@ describe('routeLayer', () => {
     expect(ctx._gradient.addColorStop).toHaveBeenCalledWith(0, '#123456')
     expect(ctx._gradient.addColorStop).toHaveBeenCalledWith(1, '#123456')
   })
+
+  it('with gradient:false strokes each leg solid in the start node color', () => {
+    const ctx = makeMockCtx()
+    const strokeColors: string[] = []
+    // capture strokeStyle at each stroke() call
+    ctx.stroke = vi.fn(() => { strokeColors.push(ctx.strokeStyle as string) })
+    routeLayer([1, 2], universe, { securityColors: colors, gradient: false }).draw(ctx as any, viewport, [])
+    expect(ctx.createLinearGradient).not.toHaveBeenCalled()
+    expect(strokeColors).toEqual(['#a50']) // leg 1->2 solid = sys1 (0.5) color
+  })
 })
 ```
 
@@ -576,6 +586,8 @@ export interface RouteLayerOptions {
   // Defaults to the bundled defaultSecurityColors. Ignored when colorForNode is set.
   securityColors?: SecurityColors
   colorForNode?: RouteColorFn // overrides securityColors when provided
+  gradient?: boolean          // blend each leg start->end color; default true.
+                              // false = solid leg in the start node's color.
   lineWidth?: number          // default 2
   endpointMarkers?: boolean   // draw a dot at origin + destination, default true
   missingColor?: string       // used when a system's security is unknown, default '#888'
@@ -597,6 +609,7 @@ export function routeLayer(
   const lineWidth = options.lineWidth ?? DEFAULT_LINE_WIDTH
   const missingColor = options.missingColor ?? DEFAULT_MISSING_COLOR
   const showMarkers = options.endpointMarkers ?? true
+  const useGradient = options.gradient ?? true
   const lookup = createSecurityColorLookup(options.securityColors ?? defaultSecurityColors, missingColor)
   const colorFor: RouteColorFn = options.colorForNode ?? ((s, sec) => lookup(sec))
 
@@ -615,10 +628,15 @@ export function routeLayer(
 
         const pa = worldToScreen(viewport, a.x, a.y)
         const pb = worldToScreen(viewport, b.x, b.y)
-        const gradient = ctx.createLinearGradient(pa.x, pa.y, pb.x, pb.y)
-        gradient.addColorStop(0, colorFor(a, a.security))
-        gradient.addColorStop(1, colorFor(b, b.security))
-        ctx.strokeStyle = gradient
+        if (useGradient) {
+          const gradient = ctx.createLinearGradient(pa.x, pa.y, pb.x, pb.y)
+          gradient.addColorStop(0, colorFor(a, a.security))
+          gradient.addColorStop(1, colorFor(b, b.security))
+          ctx.strokeStyle = gradient
+        } else {
+          // Solid leg: the start node's color runs the whole way to the next node.
+          ctx.strokeStyle = colorFor(a, a.security)
+        }
         ctx.beginPath()
         ctx.moveTo(pa.x, pa.y)
         ctx.lineTo(pb.x, pb.y)
