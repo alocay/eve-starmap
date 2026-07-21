@@ -1,10 +1,11 @@
-import { StarmapRenderer, heatmapLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
+import { StarmapRenderer, heatmapLayer, heatmapAreaLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
 
 const canvas = document.getElementById('map')
 const hoveredEl = document.getElementById('hovered')
 const clickedEl = document.getElementById('clicked')
 const toggleBtn = document.getElementById('toggle-heatmap')
 const toggleRegionsBtn = document.getElementById('toggle-regions')
+const toggleHeatmapAreaBtn = document.getElementById('toggle-heatmap-area')
 const searchInput = document.getElementById('search-input')
 const suggestionsEl = document.getElementById('suggestions')
 const tooltipEl = document.getElementById('tooltip')
@@ -41,8 +42,11 @@ function buildDemoHeatmap(systems, count) {
 }
 
 const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
+const demoHeatmapAreaValues = buildDemoHeatmap(defaultUniverseData.systems, 200)
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 let heatmapOn = false
+// 'off' | 'gooey' | 'contour' -- cycles on each click of the heatmap-area toggle.
+let heatmapAreaMode = 'off'
 let regionsOn = false
 let highlightedSystemId = null
 
@@ -70,6 +74,7 @@ function updateLayers() {
   const layers = [highlightLayer]
   if (regionsOn) layers.push(demoRegionLabelLayer)
   if (heatmapOn) layers.push(demoHeatmapLayer)
+  if (heatmapAreaMode !== 'off') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: heatmapAreaMode }))
   renderer.setLayers(layers)
 }
 
@@ -135,6 +140,12 @@ toggleRegionsBtn.addEventListener('click', () => {
   regionsOn = !regionsOn
   updateLayers()
   toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
+})
+
+toggleHeatmapAreaBtn.addEventListener('click', () => {
+  heatmapAreaMode = heatmapAreaMode === 'off' ? 'gooey' : heatmapAreaMode === 'gooey' ? 'contour' : 'off'
+  updateLayers()
+  toggleHeatmapAreaBtn.textContent = `Toggle heatmap-area layer (${heatmapAreaMode})`
 })
 
 // StarmapRenderer has no direct "pan/zoom to" API -- it only changes its

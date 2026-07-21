@@ -105,6 +105,24 @@ heatmapLayer(values, {
 })
 ```
 
+**Heatmap area** (bundled): an alternative to `heatmapLayer` -- instead of one flat circle per system, draws rounded, organically-merging area shapes around clustered heat sources. Because the merge radius is in screen pixels, blobs fuse together when zoomed out and separate into individual systems as you zoom in, with no extra logic needed:
+
+```js
+import { StarmapRenderer, heatmapAreaLayer, defaultUniverseData } from 'eve-starmap'
+
+const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
+  layers: [heatmapAreaLayer(new Map([[30000142, 1_500_000_000]]), { style: 'contour' })],
+})
+renderer.draw()
+```
+
+`heatmapAreaLayer` options (also accepts `heatmapLayer`'s `palette`/`min`/`max`/`opacityMin`/`opacityMax`):
+
+- `style: 'gooey' | 'contour'` -- default `'contour'`. `'contour'` draws nested intensity bands (an outer wash plus a hotter inner core); `'gooey'` draws a smoothly blurred blob with a continuous per-source color gradient instead of bands.
+- `radius` -- screen-space px, per-source influence. Default `40`. This is what drives merging: two sources within roughly `2 * radius` screen pixels of each other fuse into one blob.
+- `bands` -- `'contour'`-only, clamped to 1-4. Default `2`. Ignored for `'gooey'`.
+- `blurPx` -- `'gooey'`-only. Default `radius * 0.3`.
+
 **Region labels** (bundled): draws each region's name at the centroid of its member systems -- regions have no 2D-projected position of their own in the SDE, only systems do, so this is computed from `defaultUniverseData.systems` rather than stored directly:
 
 ```js
