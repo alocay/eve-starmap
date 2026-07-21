@@ -183,6 +183,24 @@ describe('heatmapAreaLayer', () => {
       expect(img.data[3]).toBe(0)
     })
 
+    it('normalizes large real-world value magnitudes so falloff still occurs (regression test for un-normalized field saturation)', () => {
+      const { factory, canvases } = makeFakeCanvasFactory()
+      const layer = heatmapAreaLayer(new Map([[1, 5_000_000_000]]), { style: 'contour', createOffscreenCanvas: factory, radius: 40 })
+      const ctx = makeMockCtx()
+
+      layer.draw(ctx as any, viewport, [sys(1, 0, 0)])
+
+      const img = canvases[0].ctx.putImageData.mock.calls[0][0]
+      const gw = canvases[0].width
+      const nearGx = Math.round(50 / 4)
+      const nearGy = Math.round(50 / 4)
+      const nearIdx = (nearGy * gw + nearGx) * 4
+      const farIdx = (0 * gw + 0) * 4 // grid cell (0,0) -> world (0,0), the far corner from the source at screen (50,50)
+
+      expect(img.data[nearIdx + 3]).toBeGreaterThan(0)
+      expect(img.data[farIdx + 3]).toBe(0)
+    })
+
     it('upscales the field grid onto the main ctx at full viewport size', () => {
       const { factory, canvases } = makeFakeCanvasFactory()
       const layer = heatmapAreaLayer(new Map([[1, 100]]), { style: 'contour', createOffscreenCanvas: factory })

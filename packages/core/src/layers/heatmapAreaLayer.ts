@@ -1,5 +1,5 @@
 import type { Layer, SystemNode, Viewport } from '../types.js'
-import { createColorScale, type ColorScaleOptions } from '../colorScale.js'
+import { createColorScale, createValueScale, type ColorScaleOptions } from '../colorScale.js'
 import { worldToScreen } from '../viewport.js'
 import { bandThresholds, fieldContribution, parseRgb, smoothstep, toTransparent } from './heatmapAreaMath.js'
 
@@ -61,8 +61,8 @@ interface Point {
 export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAreaLayerOptions = {}): Layer {
   const rawValues = [...values.values()]
   const colorFor = createColorScale(rawValues, options)
-  const bandCount = Math.max(1, Math.min(4, Math.round(options.bands ?? 2)))
-  const bandColorFor = createColorScale([], { palette: options.palette, min: 0, max: 1 })
+  const bandColorFor = createColorScale([], { palette: options.palette, min: 0, max: 1, opacityMin: options.opacityMin, opacityMax: options.opacityMax })
+  const fieldScale = createValueScale(rawValues, { min: options.min ?? 0, max: options.max })
   const style = options.style ?? 'contour'
   const radius = options.radius ?? 40
   const blurPx = options.blurPx ?? radius * 0.3
@@ -86,7 +86,7 @@ export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAr
       if (style === 'gooey') {
         drawGooey(ctx, viewport, points, radius, blurPx, colorFor, baseColor, createOffscreenCanvas)
       } else {
-        drawContour(ctx, viewport, points, radius, bandCount, bandColorFor, createOffscreenCanvas)
+        drawContour(ctx, viewport, points, radius, options.bands ?? 2, bandColorFor, fieldScale, createOffscreenCanvas)
       }
     },
   }
@@ -121,8 +121,8 @@ function drawGooey(
   if (!colorCtx) return
   colorCtx.globalCompositeOperation = 'lighter'
   const transparentBase = toTransparent(baseColor)
+  const reach = radius * GOOEY_GRADIENT_REACH
   for (const p of points) {
-    const reach = radius * GOOEY_GRADIENT_REACH
     const grad = colorCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, reach)
     grad.addColorStop(0, colorFor(p.value))
     grad.addColorStop(1, transparentBase)
@@ -140,8 +140,9 @@ function drawContour(
   viewport: Viewport,
   points: Point[],
   radius: number,
-  bandCount: number,
+  bandsRequested: number,
   bandColorFor: (t: number) => string,
+  fieldScale: (value: number) => number,
   createOffscreenCanvas: (width: number, height: number) => OffscreenCanvasLike,
 ): void {
   const gw = Math.ceil(viewport.width / GRID_STEP)
@@ -150,8 +151,8 @@ function drawContour(
   const gridCtx = grid.getContext('2d')
   if (!gridCtx) return
 
-  const thresholds = bandThresholds(bandCount)
-  const bandRgb = thresholds.map((_, i) => parseRgb(bandColorFor((i + 1) / bandCount)))
+  const thresholds = bandThresholds(bandsRequested)
+  const bandRgb = thresholds.map((_, i) => parseRgb(bandColorFor((i + 1) / thresholds.length)))
   const img = gridCtx.createImageData(gw, gh)
   const data = img.data
 
@@ -161,7 +162,7 @@ function drawContour(
       const y = gy * GRID_STEP
       let field = 0
       for (const p of points) {
-        field += fieldContribution(x - p.x, y - p.y, p.value, radius)
+        field += fieldContribution(x - p.x, y - p.y, fieldScale(p.value), radius)
       }
       let r = 0, g = 0, b = 0, a = 0
       for (let i = 0; i < thresholds.length; i++) {
