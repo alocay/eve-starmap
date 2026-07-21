@@ -1,10 +1,11 @@
-import { StarmapRenderer, heatmapLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
+import { StarmapRenderer, heatmapLayer, heatmapAreaLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
 
 const canvas = document.getElementById('map')
 const hoveredEl = document.getElementById('hovered')
 const clickedEl = document.getElementById('clicked')
 const toggleBtn = document.getElementById('toggle-heatmap')
 const toggleRegionsBtn = document.getElementById('toggle-regions')
+const toggleHeatmapAreaBtn = document.getElementById('toggle-heatmap-area')
 const searchInput = document.getElementById('search-input')
 const suggestionsEl = document.getElementById('suggestions')
 const tooltipEl = document.getElementById('tooltip')
@@ -40,9 +41,64 @@ function buildDemoHeatmap(systems, count) {
   return values
 }
 
+// Demo heatmap-area data: a few tight, real stargate-adjacent clusters at
+// widely different magnitudes (so contour's nested bands and gooey's gradient
+// depth visibly differ cluster to cluster) plus a couple of fully isolated
+// single-system hotspots (so there's always at least one blob that stays on
+// its own, however close you zoom in).
+function buildStargateAdjacency(stargates) {
+  const adjacency = new Map()
+  for (const { fromSystemId, toSystemId } of stargates) {
+    if (!adjacency.has(fromSystemId)) adjacency.set(fromSystemId, [])
+    if (!adjacency.has(toSystemId)) adjacency.set(toSystemId, [])
+    adjacency.get(fromSystemId).push(toSystemId)
+    adjacency.get(toSystemId).push(fromSystemId)
+  }
+  return adjacency
+}
+
+// Well-known trade hubs (findable via the search box above) at descending
+// magnitudes, so the busiest hub reads as the hottest, most fully-banded blob
+// and the quietest reads as a faint single-band wash.
+const HEATMAP_AREA_HUBS = [
+  { name: 'Jita', magnitude: 5_000_000_000 },
+  { name: 'Amarr', magnitude: 3_000_000_000 },
+  { name: 'Dodixie', magnitude: 1_500_000_000 },
+  { name: 'Rens', magnitude: 800_000_000 },
+  { name: 'Hek', magnitude: 400_000_000 },
+]
+
+function buildDemoHeatmapAreaData(universeData) {
+  const adjacency = buildStargateAdjacency(universeData.stargates)
+  const byName = new Map(universeData.systems.map(s => [s.name, s.id]))
+  const values = new Map()
+
+  for (const { name, magnitude } of HEATMAP_AREA_HUBS) {
+    const seedId = byName.get(name)
+    if (seedId == null) continue
+    values.set(seedId, magnitude)
+    // Immediate stargate neighbors only, run cooler than their hub, so each
+    // cluster reads as one hot core fading outward rather than a uniform disc.
+    for (const neighborId of adjacency.get(seedId) ?? []) {
+      values.set(neighborId, magnitude * (0.3 + Math.random() * 0.4))
+    }
+  }
+
+  const systemIds = universeData.systems.map(s => s.id)
+  for (let i = 0; i < 3; i++) {
+    const id = systemIds[Math.floor(Math.random() * systemIds.length)]
+    values.set(id, 2_000_000_000 + Math.random() * 2_000_000_000)
+  }
+
+  return values
+}
+
 const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
+const demoHeatmapAreaValues = buildDemoHeatmapAreaData(defaultUniverseData)
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 let heatmapOn = false
+// 'off' | 'gooey' | 'contour' -- cycles on each click of the heatmap-area toggle.
+let heatmapAreaMode = 'off'
 let regionsOn = false
 let highlightedSystemId = null
 
@@ -70,6 +126,7 @@ function updateLayers() {
   const layers = [highlightLayer]
   if (regionsOn) layers.push(demoRegionLabelLayer)
   if (heatmapOn) layers.push(demoHeatmapLayer)
+  if (heatmapAreaMode !== 'off') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: heatmapAreaMode, bands: 4 }))
   renderer.setLayers(layers)
 }
 
@@ -135,6 +192,12 @@ toggleRegionsBtn.addEventListener('click', () => {
   regionsOn = !regionsOn
   updateLayers()
   toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
+})
+
+toggleHeatmapAreaBtn.addEventListener('click', () => {
+  heatmapAreaMode = heatmapAreaMode === 'off' ? 'gooey' : heatmapAreaMode === 'gooey' ? 'contour' : 'off'
+  updateLayers()
+  toggleHeatmapAreaBtn.textContent = `Toggle heatmap-area layer (${heatmapAreaMode})`
 })
 
 // StarmapRenderer has no direct "pan/zoom to" API -- it only changes its

@@ -76,9 +76,22 @@ Two-pass technique so shape and color don't interfere with each other:
 2. **Color fill** (crisp, no blur): on a second offscreen canvas, draw each
    system's own `ctx.createRadialGradient(x, y, 0, x, y, radius * 1.6)` —
    center stop = that system's heat color (via the shared color scale, using
-   its value), outer stop = transparent base color. Composited with
-   `globalCompositeOperation = 'lighter'` so overlapping gradients from nearby
-   sources add together rather than one flatly overwriting another.
+   its value), outer stop = transparent base color. The color scale defaults
+   `opacityMin` to `0` (unless the caller sets their own), so the center
+   stop's own alpha fades toward transparent for low-value sources instead of
+   always being fully opaque — otherwise a "cold" source still renders as a
+   solid, dark-palette-colored blob (`#1a1f27` by default, easily mistaken for
+   solid grey/black against a dark map background) rather than reading as
+   faint/absent heat. Composited with the
+   default `globalCompositeOperation = 'source-over'` (bounded alpha
+   blending). *Amendment (post-manual-testing): the original design called
+   for `'lighter'` (additive) so overlapping gradients from nearby sources
+   would add together, but with many sources close together on screen (e.g.
+   zoomed far out over a dense dataset) additive blending sums every
+   overlapping gradient's RGB and saturates to solid white well before any
+   individual source reaches its own hot color. `'source-over'` is bounded —
+   it can't exceed opaque regardless of how many gradients overlap — so
+   nearby glows still layer visually without ever washing out.*
 3. **Combine:** composite the color canvas onto the mask canvas with
    `globalCompositeOperation = 'destination-in'` — this clips the gradient
    color down to exactly the merged goo silhouette from step 1. Draw the
@@ -115,6 +128,18 @@ keeps the per-frame pixel count reasonable. No frame-to-frame caching in v1 —
 recomputed on every `draw()` call. Revisit only if profiling on a real map
 shows this is too slow; not addressed speculatively here.
 
+Each band has a fixed alpha ceiling (0.3 for the outermost, +0.15 per band
+inward) so inner bands read as more intense. `opacityMin`/`opacityMax` scale
+these ceilings (`lerp(opacityMin, opacityMax, ...)` across the band index),
+defaulting to `1`/`1` (no change, matching `ColorScaleOptions`' convention
+elsewhere) — so contour's ceilings are unaffected by default, but a caller
+can dim or brighten the whole style by setting them, same as `gooey`.
+*Amendment: an earlier pass threaded `opacityMin`/`opacityMax` into the
+band-color scale used only for RGB extraction (`parseRgb` discards alpha
+entirely), so those options silently did nothing for `contour` despite being
+documented as shared across styles. Fixed by applying them directly to the
+per-band alpha ceiling instead.*
+
 ## Testing (vitest, matching existing suite)
 
 Pure math pulled into small exported helper functions (same pattern as
@@ -133,8 +158,8 @@ Pure math pulled into small exported helper functions (same pattern as
 - `focusSystemIds` equals the value map's keys (including empty-map case).
 - `style: 'gooey'`: `ctx.filter` gets set to a string containing `blur(` and
   `contrast(`; `createRadialGradient` called once per system with a value;
-  `globalCompositeOperation` set to `'lighter'` then `'destination-in'` in
-  order.
+  `globalCompositeOperation` set to `'source-over'` then `'destination-in'`
+  in order.
 - `style: 'contour'` (default when omitted): `createImageData`/`putImageData`
   called; grid size scales with viewport `width`/`height`; `bands` option
   changes number of threshold levels used (assert via a spy on the internal

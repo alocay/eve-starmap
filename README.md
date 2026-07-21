@@ -39,7 +39,7 @@ interface Layer {
 - Layers draw in array order, and by default all of them draw *above* the base system dots (set `systemDotOnTop: true` on the renderer/`EveStarmap` to flip that, e.g. so a heatmap circle doesn't fully hide the dot underneath it).
 - `focusSystemIds` is optional: if set, it tells the renderer/`EveStarmap` which systems this layer cares about, so the view can auto-fit to them (`renderer.focusOn(...)` in core, or automatically via the `EveStarmap` `layers` prop -- see its README). `heatmapLayer` sets this for you from its value map's keys; a custom layer can set its own.
 
-Two layers are bundled today: `heatmapLayer` (per-system value visualization) and `regionLabelLayer` (draws each region's name at the centroid of its member systems). Writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring) and the bundled layers' own examples.
+Three layers are bundled today: `heatmapLayer` (per-system value visualization), `heatmapAreaLayer` (rounded, zoom-dependent merging area shapes for the same kind of data), and `regionLabelLayer` (draws each region's name at the centroid of its member systems). Writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring) and the bundled layers' own examples.
 
 ## Development
 
