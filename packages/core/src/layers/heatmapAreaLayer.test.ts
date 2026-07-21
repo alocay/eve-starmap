@@ -77,6 +77,24 @@ describe('heatmapAreaLayer', () => {
     expect(factory).not.toHaveBeenCalled()
   })
 
+  it('does not throw when using the default (uninjected) canvas factory', () => {
+    // This exercises defaultCreateOffscreenCanvas for real -- no createOffscreenCanvas
+    // override -- so it also covers the null-context guards (this repo's jsdom test
+    // environment has no native `canvas` package, so getContext('2d') logs jsdom's
+    // "not implemented" warning and returns undefined here; a real browser would
+    // actually render instead of hitting that guard). Silencing console.error for
+    // just this call since that jsdom warning is expected, not a real problem.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const layer = heatmapAreaLayer(new Map([[1, 100]]), { style: 'gooey' })
+      const ctx = makeMockCtx()
+
+      expect(() => layer.draw(ctx as any, viewport, [sys(1, 0, 0)])).not.toThrow()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   describe('style: gooey', () => {
     it('blurs and contrasts the shape mask canvas, drawing one circle per source', () => {
       const { factory, canvases } = makeFakeCanvasFactory()
@@ -89,6 +107,17 @@ describe('heatmapAreaLayer', () => {
 
       expect(canvases[0].ctx.filter).toBe('blur(5px) contrast(28)')
       expect(canvases[0].ctx.arc).toHaveBeenCalledWith(50, 50, 10, 0, Math.PI * 2)
+    })
+
+    it('uses default radius (40) and blurPx (radius * 0.3) when not specified', () => {
+      const { factory, canvases } = makeFakeCanvasFactory()
+      const layer = heatmapAreaLayer(new Map([[1, 100]]), { style: 'gooey', createOffscreenCanvas: factory })
+      const ctx = makeMockCtx()
+
+      layer.draw(ctx as any, viewport, [sys(1, 0, 0)])
+
+      expect(canvases[0].ctx.arc).toHaveBeenCalledWith(50, 50, 40, 0, Math.PI * 2)
+      expect(canvases[0].ctx.filter).toBe('blur(12px) contrast(28)')
     })
 
     it('draws one radial gradient per source, from its heat color to transparent', () => {
@@ -124,6 +153,23 @@ describe('heatmapAreaLayer', () => {
       expect(alphaOf(coldCenter)).toBeLessThan(alphaOf(hotCenter))
       expect(alphaOf(coldCenter)).toBeCloseTo(0)
       expect(alphaOf(hotCenter)).toBeCloseTo(1)
+    })
+
+    it('respects a caller-provided opacityMin instead of the default-0 fade', () => {
+      const { factory, canvases } = makeFakeCanvasFactory()
+      const layer = heatmapAreaLayer(new Map([[1, 0], [2, 100]]), {
+        style: 'gooey', createOffscreenCanvas: factory, radius: 10, opacityMin: 0.5,
+      })
+      const ctx = makeMockCtx()
+
+      layer.draw(ctx as any, viewport, [sys(1, 0, 0), sys(2, 10, 10)])
+
+      const colorCtx = canvases[1].ctx
+      const centerStopCalls = colorCtx.gradient.addColorStop.mock.calls.filter((call: any[]) => call[0] === 0)
+      const coldCenter = centerStopCalls[0][1] as string
+      const alphaOf = (rgba: string) => Number(rgba.match(/[\d.]+(?=\)$)/)![0])
+
+      expect(alphaOf(coldCenter)).toBeCloseTo(0.5)
     })
 
     it('composites gradients with "source-over" (not additive) then clips to the mask with "destination-in"', () => {
@@ -229,6 +275,34 @@ describe('heatmapAreaLayer', () => {
       layer.draw(ctx as any, viewport, [sys(1, 0, 0)])
 
       expect(ctx.drawImage).toHaveBeenCalledWith(canvases[0], 0, 0, 25, 25, 0, 0, 100, 100)
+    })
+
+    function alphaNearSource(options: Record<string, unknown>) {
+      const { factory, canvases } = makeFakeCanvasFactory()
+      const layer = heatmapAreaLayer(new Map([[1, 5_000_000_000]]), {
+        style: 'contour', createOffscreenCanvas: factory, radius: 40, ...options,
+      })
+      const ctx = makeMockCtx()
+
+      layer.draw(ctx as any, viewport, [sys(1, 0, 0)])
+
+      const img = canvases[0].ctx.putImageData.mock.calls[0][0]
+      const gw = canvases[0].width
+      const gx = Math.round(50 / 4)
+      const gy = Math.round(50 / 4)
+      return img.data[(gy * gw + gx) * 4 + 3]
+    }
+
+    it('scales band alpha ceilings by opacityMin/opacityMax', () => {
+      const defaultAlpha = alphaNearSource({})
+      const dimmedAlpha = alphaNearSource({ opacityMax: 0.1 })
+
+      expect(dimmedAlpha).toBeLessThan(defaultAlpha)
+    })
+
+    it('clamps bands below 1 up to 1 and above 4 down to 4', () => {
+      expect(alphaNearSource({ bands: 0 })).toBe(alphaNearSource({ bands: 1 }))
+      expect(alphaNearSource({ bands: 10 })).toBe(alphaNearSource({ bands: 4 }))
     })
   })
 })

@@ -128,6 +128,18 @@ keeps the per-frame pixel count reasonable. No frame-to-frame caching in v1 —
 recomputed on every `draw()` call. Revisit only if profiling on a real map
 shows this is too slow; not addressed speculatively here.
 
+Each band has a fixed alpha ceiling (0.3 for the outermost, +0.15 per band
+inward) so inner bands read as more intense. `opacityMin`/`opacityMax` scale
+these ceilings (`lerp(opacityMin, opacityMax, ...)` across the band index),
+defaulting to `1`/`1` (no change, matching `ColorScaleOptions`' convention
+elsewhere) — so contour's ceilings are unaffected by default, but a caller
+can dim or brighten the whole style by setting them, same as `gooey`.
+*Amendment: an earlier pass threaded `opacityMin`/`opacityMax` into the
+band-color scale used only for RGB extraction (`parseRgb` discards alpha
+entirely), so those options silently did nothing for `contour` despite being
+documented as shared across styles. Fixed by applying them directly to the
+per-band alpha ceiling instead.*
+
 ## Testing (vitest, matching existing suite)
 
 Pure math pulled into small exported helper functions (same pattern as

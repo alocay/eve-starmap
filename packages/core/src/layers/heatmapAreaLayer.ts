@@ -1,5 +1,5 @@
 import type { Layer, SystemNode, Viewport } from '../types.js'
-import { createColorScale, createValueScale, type ColorScaleOptions } from '../colorScale.js'
+import { createColorScale, createValueScale, lerp, type ColorScaleOptions } from '../colorScale.js'
 import { worldToScreen } from '../viewport.js'
 import { bandThresholds, fieldContribution, parseRgb, smoothstep, toTransparent } from './heatmapAreaMath.js'
 
@@ -65,8 +65,14 @@ export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAr
   // heat, instead of always being a fully-opaque, dark-palette-colored blob
   // that reads as "solid grey/black" against a dark map background.
   const colorFor = createColorScale(rawValues, { ...options, opacityMin: options.opacityMin ?? 0 })
-  const bandColorFor = createColorScale([], { palette: options.palette, min: 0, max: 1, opacityMin: options.opacityMin, opacityMax: options.opacityMax })
+  const bandColorFor = createColorScale([], { palette: options.palette, min: 0, max: 1 })
   const fieldScale = createValueScale(rawValues, { min: options.min ?? 0, max: options.max })
+  // Contour's per-band alpha ceiling (0.3, 0.45, 0.6, 0.75 by default -- each
+  // band a bit more opaque than the last) is scaled by opacityMin/opacityMax
+  // so those options actually affect contour too, not just gooey. Defaults to
+  // 1/1 (no change), matching ColorScaleOptions' own convention elsewhere.
+  const opacityMin = options.opacityMin ?? 1
+  const opacityMax = options.opacityMax ?? 1
   const style = options.style ?? 'contour'
   const radius = options.radius ?? 40
   const blurPx = options.blurPx ?? radius * 0.3
@@ -90,7 +96,7 @@ export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAr
       if (style === 'gooey') {
         drawGooey(ctx, viewport, points, radius, blurPx, colorFor, baseColor, createOffscreenCanvas)
       } else {
-        drawContour(ctx, viewport, points, radius, options.bands ?? 2, bandColorFor, fieldScale, createOffscreenCanvas)
+        drawContour(ctx, viewport, points, radius, options.bands ?? 2, bandColorFor, fieldScale, opacityMin, opacityMax, createOffscreenCanvas)
       }
     },
   }
@@ -151,6 +157,8 @@ function drawContour(
   bandsRequested: number,
   bandColorFor: (t: number) => string,
   fieldScale: (value: number) => number,
+  opacityMin: number,
+  opacityMax: number,
   createOffscreenCanvas: (width: number, height: number) => OffscreenCanvasLike,
 ): void {
   const gw = Math.ceil(viewport.width / GRID_STEP)
@@ -161,6 +169,10 @@ function drawContour(
 
   const thresholds = bandThresholds(bandsRequested)
   const bandRgb = thresholds.map((_, i) => parseRgb(bandColorFor((i + 1) / thresholds.length)))
+  const bandCeiling = thresholds.map((_, i) => {
+    const opacityScale = thresholds.length > 1 ? lerp(opacityMin, opacityMax, i / (thresholds.length - 1)) : opacityMax
+    return (0.3 + 0.15 * i) * opacityScale
+  })
   const img = gridCtx.createImageData(gw, gh)
   const data = img.data
 
@@ -175,7 +187,7 @@ function drawContour(
       let r = 0, g = 0, b = 0, a = 0
       for (let i = 0; i < thresholds.length; i++) {
         const t = thresholds[i]
-        const bandAlpha = smoothstep(t - 0.15, t + 0.15, field) * (0.3 + 0.15 * i)
+        const bandAlpha = smoothstep(t - 0.15, t + 0.15, field) * bandCeiling[i]
         if (bandAlpha > a) {
           a = bandAlpha
           ;[r, g, b] = bandRgb[i]
