@@ -55,6 +55,7 @@ const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.syste
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 let heatmapOn = false
 let regionsOn = false
+let currentRouteLayer = null
 let highlightedSystemId = null
 
 // Draws a ring around the searched system, using the same public Layer
@@ -81,6 +82,7 @@ function updateLayers() {
   const layers = [highlightLayer]
   if (regionsOn) layers.push(demoRegionLabelLayer)
   if (heatmapOn) layers.push(demoHeatmapLayer)
+  if (currentRouteLayer) layers.push(currentRouteLayer)
   renderer.setLayers(layers)
 }
 
@@ -148,9 +150,11 @@ toggleRegionsBtn.addEventListener('click', () => {
   toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
 })
 
-// Route lookup: fetches a live route from ESI, then swaps the renderer over to
-// just the route layer (bundled defaultSecurityColors) and fits the view to it --
-// a manual way to exercise fetchRoute + routeLayer end-to-end against real data.
+// Route lookup: fetches a live route from ESI, then adds the route layer into
+// the same updateLayers() combiner every other toggle uses (so it composes
+// with whatever else is currently shown, instead of replacing all layers) and
+// fits the view to it -- a manual way to exercise fetchRoute + routeLayer
+// end-to-end against real data.
 routeShowBtn.addEventListener('click', async () => {
   const origin = Number(routeOriginInput.value)
   const destination = Number(routeDestinationInput.value)
@@ -164,7 +168,8 @@ routeShowBtn.addEventListener('click', async () => {
   try {
     const ids = await fetchRoute(origin, destination)
     const route = routeLayer(ids, defaultUniverseData)
-    renderer.setLayers([route])
+    currentRouteLayer = route
+    updateLayers()
     renderer.focusOn(route.focusSystemIds)
     renderer.draw()
     routeStatusEl.textContent = `${ids.length} jump${ids.length === 1 ? '' : 's'}`
