@@ -1,4 +1,12 @@
-import { StarmapRenderer, heatmapLayer, heatmapAreaLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
+import {
+  StarmapRenderer,
+  heatmapLayer,
+  heatmapAreaLayer,
+  regionLabelLayer,
+  fetchRoute,
+  routeLayer,
+  defaultUniverseData,
+} from '../packages/core/dist/index.js'
 
 const canvas = document.getElementById('map')
 const hoveredEl = document.getElementById('hovered')
@@ -9,6 +17,11 @@ const toggleHeatmapAreaBtn = document.getElementById('toggle-heatmap-area')
 const searchInput = document.getElementById('search-input')
 const suggestionsEl = document.getElementById('suggestions')
 const tooltipEl = document.getElementById('tooltip')
+const routeOriginInput = document.getElementById('route-origin')
+const routeDestinationInput = document.getElementById('route-destination')
+const routeShowBtn = document.getElementById('route-show')
+const routeStatusEl = document.getElementById('route-status')
+const routeGradientCheckbox = document.getElementById('route-gradient')
 
 function computeBounds(systems) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -93,6 +106,19 @@ function buildDemoHeatmapAreaData(universeData) {
   return values
 }
 
+const systemIdByLowerName = new Map(defaultUniverseData.systems.map(s => [s.name.toLowerCase(), s.id]))
+
+// Accepts either a numeric system id or a system name (case-insensitive,
+// exact match) -- whichever the user typed into a route input. Returns
+// undefined if it's neither a valid number nor a known system name.
+function resolveSystemId(input) {
+  const trimmed = input.trim()
+  if (trimmed === '') return undefined
+  const asNumber = Number(trimmed)
+  if (Number.isFinite(asNumber)) return asNumber
+  return systemIdByLowerName.get(trimmed.toLowerCase())
+}
+
 const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
 const demoHeatmapAreaValues = buildDemoHeatmapAreaData(defaultUniverseData)
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
@@ -100,6 +126,8 @@ let heatmapOn = false
 // 'off' | 'gooey' | 'contour' -- cycles on each click of the heatmap-area toggle.
 let heatmapAreaMode = 'off'
 let regionsOn = false
+let currentRouteLayer = null
+let currentRouteIds = null // cached so the gradient toggle can rebuild without re-fetching
 let highlightedSystemId = null
 
 // Draws a ring around the searched system, using the same public Layer
@@ -127,6 +155,7 @@ function updateLayers() {
   if (regionsOn) layers.push(demoRegionLabelLayer)
   if (heatmapOn) layers.push(demoHeatmapLayer)
   if (heatmapAreaMode !== 'off') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: heatmapAreaMode, bands: 4 }))
+  if (currentRouteLayer) layers.push(currentRouteLayer)
   renderer.setLayers(layers)
 }
 
@@ -198,6 +227,48 @@ toggleHeatmapAreaBtn.addEventListener('click', () => {
   heatmapAreaMode = heatmapAreaMode === 'off' ? 'gooey' : heatmapAreaMode === 'gooey' ? 'contour' : 'off'
   updateLayers()
   toggleHeatmapAreaBtn.textContent = `Toggle heatmap-area layer (${heatmapAreaMode})`
+})
+
+// Route lookup: fetches a live route from ESI, then adds the route layer into
+// the same updateLayers() combiner every other toggle uses (so it composes
+// with whatever else is currently shown, instead of replacing all layers) and
+// fits the view to it -- a manual way to exercise fetchRoute + routeLayer
+// end-to-end against real data.
+routeShowBtn.addEventListener('click', async () => {
+  const origin = resolveSystemId(routeOriginInput.value)
+  const destination = resolveSystemId(routeDestinationInput.value)
+  if (origin === undefined || destination === undefined) {
+    const which = origin === undefined && destination === undefined ? 'origin and destination'
+      : origin === undefined ? 'origin' : 'destination'
+    routeStatusEl.textContent = `Unknown system (${which}) -- enter a valid id or exact system name.`
+    return
+  }
+
+  routeStatusEl.textContent = 'Loading route...'
+  routeShowBtn.disabled = true
+  try {
+    const ids = await fetchRoute(origin, destination)
+    currentRouteIds = ids
+    const route = routeLayer(ids, defaultUniverseData, { gradient: routeGradientCheckbox.checked })
+    currentRouteLayer = route
+    updateLayers()
+    renderer.focusOn(route.focusSystemIds)
+    renderer.draw()
+    routeStatusEl.textContent = `${ids.length} jump${ids.length === 1 ? '' : 's'}`
+  } catch (err) {
+    routeStatusEl.textContent = `Route failed: ${err.message}`
+  } finally {
+    routeShowBtn.disabled = false
+  }
+})
+
+// Rebuilds the already-fetched route with the new gradient setting, no
+// re-fetch needed -- lets you compare gradient vs. solid-leg rendering
+// on the same route.
+routeGradientCheckbox.addEventListener('change', () => {
+  if (!currentRouteIds) return
+  currentRouteLayer = routeLayer(currentRouteIds, defaultUniverseData, { gradient: routeGradientCheckbox.checked })
+  updateLayers()
 })
 
 // StarmapRenderer has no direct "pan/zoom to" API -- it only changes its

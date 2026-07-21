@@ -85,6 +85,32 @@
         background: #1a1f27;
         color: #e8a33d;
       }
+      #route-box {
+        margin-top: 8px;
+        border-top: 1px solid #2a3340;
+        padding-top: 8px;
+      }
+      #route-box input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #1a1f27;
+        color: #c8d0da;
+        border: 1px solid #2a3340;
+        border-radius: 3px;
+        padding: 5px 8px;
+        font-family: inherit;
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      #route-box input:focus {
+        outline: none;
+        border-color: #e8a33d;
+      }
+      #route-status {
+        display: block;
+        margin-top: 4px;
+        color: #8a99aa;
+      }
       canvas {
         display: block;
       }
@@ -114,6 +140,13 @@
       <div id="search-box">
         <input id="search-input" type="text" placeholder="Search system name..." autocomplete="off" />
         <ul id="suggestions" hidden></ul>
+      </div>
+      <div id="route-box">
+        <input id="route-origin" type="text" placeholder="Origin: id or name" />
+        <input id="route-destination" type="text" placeholder="Destination: id or name" />
+        <button id="route-show">Show route</button>
+        <label><input id="route-gradient" type="checkbox" checked /> Gradient</label>
+        <span id="route-status"></span>
       </div>
     </div>
     <div id="tooltip" hidden></div>

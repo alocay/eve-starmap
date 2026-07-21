@@ -5,6 +5,9 @@ export interface SystemNode {
   regionId: number
   x: number
   y: number
+  // Raw (unrounded) security status, e.g. 0.4531. Optional so fixtures/callers
+  // built before this field don't need updating (same rationale as regions).
+  security?: number
 }
 
 export interface StargateEdge {

@@ -16,6 +16,7 @@
 //
 // Confirmed field names (via the riftforeve.online schema docs):
 //   mapSolarSystems.jsonl: { _key, name: {en, de, ...}, constellationID, regionID,
+//                            securityStatus (raw float, e.g. 0.858324),
 //                            position: {x,y,z} (3D, required),
 //                            position2D: {x,y} (2D projected map position used by the
 //                            in-game starmap; OPTIONAL — absent for wormhole-class
@@ -149,6 +150,7 @@ async function main() {
       regionId: s.regionID,
       x: s.position2D.x,
       y: s.position2D.y,
+      security: s.securityStatus,
     }))
 
   const systemIds = new Set(systems.map(s => s.id))

@@ -39,7 +39,23 @@ interface Layer {
 - Layers draw in array order, and by default all of them draw *above* the base system dots (set `systemDotOnTop: true` on the renderer/`EveStarmap` to flip that, e.g. so a heatmap circle doesn't fully hide the dot underneath it).
 - `focusSystemIds` is optional: if set, it tells the renderer/`EveStarmap` which systems this layer cares about, so the view can auto-fit to them (`renderer.focusOn(...)` in core, or automatically via the `EveStarmap` `layers` prop -- see its README). `heatmapLayer` sets this for you from its value map's keys; a custom layer can set its own.
 
-Three layers are bundled today: `heatmapLayer` (per-system value visualization), `heatmapAreaLayer` (rounded, zoom-dependent merging area shapes for the same kind of data), and `regionLabelLayer` (draws each region's name at the centroid of its member systems). Writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring) and the bundled layers' own examples.
+Four layers are bundled today: `heatmapLayer` (per-system value visualization), `heatmapAreaLayer` (rounded, zoom-dependent merging area shapes for the same kind of data), `regionLabelLayer` (draws each region's name at the centroid of its member systems), and `routeLayer` (draws a jump route as a polyline, each leg colored by security status). Writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring) and the bundled layers' own examples.
+
+### Route layer
+
+`fetchRoute` looks up an ordered jump route between two systems via EVE's public ESI `/route` endpoint (no auth, no API key), and `routeLayer` draws it -- each leg a gradient between its endpoints' security-tier colors:
+
+```js
+import { StarmapRenderer, fetchRoute, routeLayer, defaultUniverseData } from 'eve-starmap'
+
+const ids = await fetchRoute(30000142, 30002187, { flag: 'secure' })
+const route = routeLayer(ids, defaultUniverseData) // uses bundled defaultSecurityColors
+const renderer = new StarmapRenderer(canvas, defaultUniverseData, { layers: [route] })
+renderer.focusOn(route.focusSystemIds)
+renderer.draw()
+```
+
+`securityColors` defaults to the bundled `defaultSecurityColors`; pass your own tier palette (`Record<string, string>` or `Map<number, string>`, keyed `"1.0"`..`"0.0"`) to `routeLayer`'s options to override it, or set `colorForNode: (system, security) => string` to control coloring per node yourself (this wins over `securityColors`). Coloring is driven by the optional `security` field bundled on each `SystemNode`; see `packages/core/README.md#examples` for the full option list.
 
 ## Development
 
@@ -51,13 +67,13 @@ npm run build      # tsup, all packages
 
 ## Manual tools
 
-- **Playground** (`playground/`) — interactive hands-on testing: real pan/zoom/click/hover, system search, heatmap/region-label toggles. Serve from repo root (e.g. `npx serve .`) and open `/playground/index.html`.
+- **Playground** (`playground/`) — interactive hands-on testing: real pan/zoom/click/hover, system search, heatmap/heatmap-area/region-label toggles, and a route lookup (origin/destination or system name + "Show route"). Serve from repo root (e.g. `npx serve .`) and open `/playground/index.html`.
 - **Perf benchmark** (`benchmark/`) — simulated full-galaxy pan/zoom with a live FPS readout, for checking the 30fps target. Same serving approach, open `/benchmark/index.html`.
 - **Regenerating bundled data** — `node scripts/build-universe-data.js` refreshes `packages/core/src/data/defaultUniverseData.ts` from a live SDE mirror. Real data is already bundled; only needed to pick up a newer SDE release.
 
 ## Possible future additions
 
-- More layer types (route lines, custom markers, jump-range overlays)
+- More layer types (custom markers, jump-range overlays)
 - WebGL renderer, if Canvas 2D doesn't hold the perf target at full-galaxy scale
 - Wrappers for other frameworks (Vue, Svelte)
 

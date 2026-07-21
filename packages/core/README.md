@@ -24,6 +24,8 @@ renderer.draw()
 
 Pass your own `UniverseData` (`{ systems: SystemNode[], stargates: StargateEdge[] }`) instead of `defaultUniverseData` to use a different or fresher dataset. Invalid data throws at construction time.
 
+`SystemNode` also carries an optional `security?: number` (raw, unrounded security status, e.g. `0.4531`) -- bundled on `defaultUniverseData` and used by `routeLayer` to color each route leg. It's optional so datasets/fixtures built before this field don't need updating.
+
 ## Hover behavior
 
 `onSystemHover` (constructor option) covers the simple case. For multiple independent hover behaviors (a DOM tooltip, a canvas highlight layer, a side panel) that shouldn't have to know about each other, register each separately with `renderer.onHover()`:
@@ -149,6 +151,37 @@ regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems,
 })
 ```
 
+**Route layer** (bundled): draws the ordered jump route between two systems as a polyline, each leg a canvas gradient between its two endpoints' security-tier colors. `fetchRoute` fetches the route (ordered system ids, origin first) from EVE's public ESI `/route` endpoint -- no auth, no API key:
+
+```js
+import { StarmapRenderer, fetchRoute, routeLayer, defaultUniverseData } from 'eve-starmap'
+
+const ids = await fetchRoute(30000142, 30002187, { flag: 'secure' })
+const route = routeLayer(ids, defaultUniverseData) // uses bundled defaultSecurityColors
+const renderer = new StarmapRenderer(canvas, defaultUniverseData, { layers: [route] })
+renderer.focusOn(route.focusSystemIds)
+renderer.draw()
+```
+
+`fetchRoute(origin, destination, options?)` options:
+
+- `flag` -- `'shortest'` (default), `'secure'`, or `'insecure'`, matching ESI's route-preference options.
+- `avoid` -- system ids to route around.
+- `connections` -- extra `[fromId, toId]` jump connections to allow beyond stargates (e.g. a jump bridge).
+- `baseUrl` -- override the ESI base URL (default `https://esi.evetech.net/latest`).
+- `fetch` -- override the `fetch` implementation (e.g. for testing, or a non-browser runtime).
+
+`routeLayer(systemIds, universeData, options?)` options:
+
+- `securityColors` -- tier palette (keys `"1.0"`..`"0.0"`, values as hex colors; `Record<string, string>` or `Map<number, string>`), default the bundled `defaultSecurityColors`. Ignored when `colorForNode` is set.
+- `colorForNode` -- `(system: SystemNode, security: number | undefined) => string`, overrides `securityColors` and lets you color each node yourself.
+- `gradient` -- default `true`: each leg blends from its start node's color to its end node's. `false` draws a solid leg in the start node's color.
+- `lineWidth` -- default `2`.
+- `endpointMarkers` -- draw a dot at the origin and destination, default `true`.
+- `missingColor` -- color used when a system's `security` is unknown, default `'#888'`.
+
+Like `heatmapLayer`, `routeLayer` sets `focusSystemIds` for you (the route's system ids in order), so `renderer.focusOn(route.focusSystemIds)` pans/zooms to fit the whole route.
+
 ## System dot stacking order
 
 By default, the base system dot (and its label) draws *before* layers, so a layer like `heatmapLayer` fully covers it — this keeps values readable when zoomed out, since a dot always on top of a shrunk heatmap circle would obscure it. Set `systemDotOnTop: true` (on both the renderer and, if using `heatmapLayer`, the layer itself) to flip that — the dot stays visible above layer output instead:
@@ -179,7 +212,7 @@ renderer.focusOn(layer.focusSystemIds) // == [...values.keys()], heatmapLayer se
 
 `Layer` has an optional `focusSystemIds?: number[]` property for exactly this — `heatmapLayer` fills it in automatically from its value map's keys, and any custom layer can set its own. The core renderer doesn't read it automatically (that auto-derivation lives in `eve-starmap-react`'s `EveStarmap`, see its README) — in vanilla usage, pass it to `focusOn()` yourself as above.
 
-See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search/heatmap+region-label toggles).
+See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search/heatmap+region-label toggles/route lookup).
 
 ## License
 
