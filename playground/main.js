@@ -1,4 +1,11 @@
-import { StarmapRenderer, heatmapLayer, regionLabelLayer, defaultUniverseData } from '../packages/core/dist/index.js'
+import {
+  StarmapRenderer,
+  heatmapLayer,
+  regionLabelLayer,
+  fetchRoute,
+  routeLayer,
+  defaultUniverseData,
+} from '../packages/core/dist/index.js'
 
 const canvas = document.getElementById('map')
 const hoveredEl = document.getElementById('hovered')
@@ -8,6 +15,10 @@ const toggleRegionsBtn = document.getElementById('toggle-regions')
 const searchInput = document.getElementById('search-input')
 const suggestionsEl = document.getElementById('suggestions')
 const tooltipEl = document.getElementById('tooltip')
+const routeOriginInput = document.getElementById('route-origin')
+const routeDestinationInput = document.getElementById('route-destination')
+const routeShowBtn = document.getElementById('route-show')
+const routeStatusEl = document.getElementById('route-status')
 
 function computeBounds(systems) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -135,6 +146,33 @@ toggleRegionsBtn.addEventListener('click', () => {
   regionsOn = !regionsOn
   updateLayers()
   toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
+})
+
+// Route lookup: fetches a live route from ESI, then swaps the renderer over to
+// just the route layer (bundled defaultSecurityColors) and fits the view to it --
+// a manual way to exercise fetchRoute + routeLayer end-to-end against real data.
+routeShowBtn.addEventListener('click', async () => {
+  const origin = Number(routeOriginInput.value)
+  const destination = Number(routeDestinationInput.value)
+  if (!Number.isFinite(origin) || !Number.isFinite(destination)) {
+    routeStatusEl.textContent = 'Enter both system ids.'
+    return
+  }
+
+  routeStatusEl.textContent = 'Loading route...'
+  routeShowBtn.disabled = true
+  try {
+    const ids = await fetchRoute(origin, destination)
+    const route = routeLayer(ids, defaultUniverseData)
+    renderer.setLayers([route])
+    renderer.focusOn(route.focusSystemIds)
+    renderer.draw()
+    routeStatusEl.textContent = `${ids.length} jump${ids.length === 1 ? '' : 's'}`
+  } catch (err) {
+    routeStatusEl.textContent = `Route failed: ${err.message}`
+  } finally {
+    routeShowBtn.disabled = false
+  }
 })
 
 // StarmapRenderer has no direct "pan/zoom to" API -- it only changes its
