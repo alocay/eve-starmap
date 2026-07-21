@@ -1,6 +1,6 @@
 {
   "name": "eve-starmap",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Framework-agnostic Canvas 2D renderer for EVE Online's 2D starmap, with a pluggable layer system.",
   "repository": {
     "type": "git",
