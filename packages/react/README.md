@@ -22,6 +22,124 @@ function App() {
 }
 ```
 
+## Layers
+
+Layers are plain objects from `eve-starmap` (the core package) -- they work identically regardless of which framework renders them, so you pass them straight into the `layers` prop with no React-specific wiring. Four are bundled:
+
+- **[Heatmap](#heatmap)** (`heatmapLayer`) -- per-system value visualization: flat circles whose color/opacity/radius scale with value.
+- **[Heatmap Area](#heatmap-area)** (`heatmapAreaLayer`) -- rounded, zoom-dependent merging area shapes for the same kind of data (blurred "gooey" blobs, or nested contour bands).
+- **[Region Labels](#region-labels)** (`regionLabelLayer`) -- draws each region's name at the centroid of its member systems.
+- **[Route](#route)** (`routeLayer` + `fetchRoute`) -- draws a jump route as a polyline, each leg colored by security status.
+
+Full option lists for all four (and how to write your own) are in [`packages/core/README.md#layers`](../core/README.md#layers) -- this section just shows the `<EveStarmap/>`-specific wiring (`useMemo` so a new layer array isn't created every render) for each.
+
+### Heatmap
+
+```jsx
+import { useMemo } from 'react'
+import { EveStarmap } from 'eve-starmap-react'
+import { heatmapLayer, defaultUniverseData } from 'eve-starmap'
+
+function App({ valuesBySystem }) { // Map<systemId, value>
+  const layers = useMemo(() => [heatmapLayer(valuesBySystem)], [valuesBySystem])
+  return <EveStarmap data={defaultUniverseData} layers={layers} />
+}
+```
+
+See [`packages/core/README.md#heatmap`](../core/README.md#heatmap) for the full option list (`palette`, `opacityMin`/`opacityMax`, `radiusMin`/`radiusMax`, `radius`, `min`/`max`).
+
+### Heatmap Area
+
+```jsx
+import { useMemo } from 'react'
+import { EveStarmap } from 'eve-starmap-react'
+import { heatmapAreaLayer, defaultUniverseData } from 'eve-starmap'
+
+function App({ valuesBySystem }) { // Map<systemId, value>
+  const layers = useMemo(
+    () => [heatmapAreaLayer(valuesBySystem, { style: 'contour' })],
+    [valuesBySystem]
+  )
+  return <EveStarmap data={defaultUniverseData} layers={layers} />
+}
+```
+
+See [`packages/core/README.md#heatmap-area`](../core/README.md#heatmap-area) for the full option list (`style`, `radius`, `bands`, `blurPx`).
+
+### Region Labels
+
+`regionLabelLayer` (bundled in `eve-starmap`) works the same way through `EveStarmap`'s generic `layers` prop -- there's no React-specific wiring needed, since a `Layer` object is a `Layer` object regardless of where it's constructed:
+
+```jsx
+import { useMemo } from 'react'
+import { EveStarmap } from 'eve-starmap-react'
+import { regionLabelLayer, defaultUniverseData } from 'eve-starmap'
+
+function App() {
+  const layers = useMemo(
+    () => [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)],
+    []
+  )
+
+  return <EveStarmap data={defaultUniverseData} layers={layers} />
+}
+```
+
+To toggle labels reactively (e.g. a checkbox), pass state into the `visible` option and re-memoize on it -- either this or omitting the layer from `layers` entirely both work equally well:
+
+```jsx
+function App() {
+  const [showRegions, setShowRegions] = useState(true)
+
+  const layers = useMemo(
+    () => [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems, { visible: showRegions })],
+    [showRegions]
+  )
+
+  return (
+    <>
+      <button onClick={() => setShowRegions(v => !v)}>Toggle regions</button>
+      <EveStarmap data={defaultUniverseData} layers={layers} />
+    </>
+  )
+}
+```
+
+See [`packages/core/README.md#region-labels`](../core/README.md#region-labels) for the full option list (`color`, `opacity`, `fontSize`, `font`, `visible`).
+
+### Route
+
+`fetchRoute` is plain async (no React-specific version needed) -- call it, then memoize the resulting `routeLayer` the same way as any other layer:
+
+```jsx
+import { useEffect, useMemo, useState } from 'react'
+import { EveStarmap } from 'eve-starmap-react'
+import { fetchRoute, routeLayer, defaultUniverseData } from 'eve-starmap'
+
+function App({ origin, destination }) {
+  const [routeIds, setRouteIds] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchRoute(origin, destination).then(ids => {
+      if (!cancelled) setRouteIds(ids)
+    })
+    return () => { cancelled = true }
+  }, [origin, destination])
+
+  const layers = useMemo(
+    () => (routeIds ? [routeLayer(routeIds, defaultUniverseData)] : []),
+    [routeIds]
+  )
+
+  // No focusSystemIds needed -- routeLayer sets it for you, and EveStarmap
+  // fits the view to it automatically (see "Zooming to fit a set of systems").
+  return <EveStarmap data={defaultUniverseData} layers={layers} />
+}
+```
+
+See [`packages/core/README.md#route`](../core/README.md#route) for the full option lists for both `fetchRoute` (`flag`, `avoid`, `connections`, `baseUrl`, `fetch`) and `routeLayer` (`securityColors`, `colorForNode`, `gradient`, `lineWidth`, `endpointMarkers`, `missingColor`).
+
 ## Hover (simple case)
 
 For a single hover behavior, pass `onSystemHover` directly -- no ref needed:
@@ -158,47 +276,6 @@ const myLayer = {
   draw(ctx, viewport, systems) { /* ... */ },
 }
 ```
-
-## Region labels
-
-`regionLabelLayer` (bundled in `eve-starmap`) works the same way through `EveStarmap`'s generic `layers` prop -- there's no React-specific wiring needed, since a `Layer` object is a `Layer` object regardless of where it's constructed:
-
-```jsx
-import { useMemo } from 'react'
-import { EveStarmap } from 'eve-starmap-react'
-import { regionLabelLayer, defaultUniverseData } from 'eve-starmap'
-
-function App() {
-  const layers = useMemo(
-    () => [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)],
-    []
-  )
-
-  return <EveStarmap data={defaultUniverseData} layers={layers} />
-}
-```
-
-To toggle labels reactively (e.g. a checkbox), pass state into the `visible` option and re-memoize on it -- either this or omitting the layer from `layers` entirely both work equally well:
-
-```jsx
-function App() {
-  const [showRegions, setShowRegions] = useState(true)
-
-  const layers = useMemo(
-    () => [regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems, { visible: showRegions })],
-    [showRegions]
-  )
-
-  return (
-    <>
-      <button onClick={() => setShowRegions(v => !v)}>Toggle regions</button>
-      <EveStarmap data={defaultUniverseData} layers={layers} />
-    </>
-  )
-}
-```
-
-See [`packages/core/README.md`](../core/README.md#examples) for the full list of `regionLabelLayer` options (`color`, `opacity`, `fontSize`, `font`).
 
 ## License
 

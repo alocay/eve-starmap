@@ -20,7 +20,7 @@ const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
 renderer.draw()
 ```
 
-React: see [packages/react/README.md](packages/react/README.md) (includes multi-handler hover example). Full core API + more examples (hover behaviors, layers): see [packages/core/README.md#examples](packages/core/README.md#examples).
+React: see [packages/react/README.md](packages/react/README.md) (includes multi-handler hover example). Full core API + more examples (hover behaviors, layers): see [packages/core/README.md](packages/core/README.md#layers).
 
 ## Layer system
 
@@ -39,23 +39,16 @@ interface Layer {
 - Layers draw in array order, and by default all of them draw *above* the base system dots (set `systemDotOnTop: true` on the renderer/`EveStarmap` to flip that, e.g. so a heatmap circle doesn't fully hide the dot underneath it).
 - `focusSystemIds` is optional: if set, it tells the renderer/`EveStarmap` which systems this layer cares about, so the view can auto-fit to them (`renderer.focusOn(...)` in core, or automatically via the `EveStarmap` `layers` prop -- see its README). `heatmapLayer` sets this for you from its value map's keys; a custom layer can set its own.
 
-Four layers are bundled today: `heatmapLayer` (per-system value visualization), `heatmapAreaLayer` (rounded, zoom-dependent merging area shapes for the same kind of data), `regionLabelLayer` (draws each region's name at the centroid of its member systems), and `routeLayer` (draws a jump route as a polyline, each leg colored by security status). Writing your own is just implementing the interface above -- see `packages/core/README.md#examples` for a full custom-layer example (a hover highlight ring) and the bundled layers' own examples.
+## Available layers
 
-### Route layer
+Four layers are bundled today; each has its own dedicated section with full options and an example in [packages/core/README.md#layers](packages/core/README.md#layers) (works identically through the React wrapper -- see [packages/react/README.md](packages/react/README.md) for the `<EveStarmap/>`-specific wiring):
 
-`fetchRoute` looks up an ordered jump route between two systems via EVE's public ESI `/route` endpoint (no auth, no API key), and `routeLayer` draws it -- each leg a gradient between its endpoints' security-tier colors:
+- **`heatmapLayer`** — per-system value visualization: flat circles whose color/opacity/radius scale with value.
+- **`heatmapAreaLayer`** — rounded, zoom-dependent merging area shapes for the same kind of data (blurred "gooey" blobs, or nested contour bands).
+- **`regionLabelLayer`** — draws each region's name at the centroid of its member systems.
+- **`routeLayer`** (+ `fetchRoute`) — draws a jump route as a polyline, each leg colored by security status.
 
-```js
-import { StarmapRenderer, fetchRoute, routeLayer, defaultUniverseData } from 'eve-starmap'
-
-const ids = await fetchRoute(30000142, 30002187, { flag: 'secure' })
-const route = routeLayer(ids, defaultUniverseData) // uses bundled defaultSecurityColors
-const renderer = new StarmapRenderer(canvas, defaultUniverseData, { layers: [route] })
-renderer.focusOn(route.focusSystemIds)
-renderer.draw()
-```
-
-`securityColors` defaults to the bundled `defaultSecurityColors`; pass your own tier palette (`Record<string, string>` or `Map<number, string>`, keyed `"1.0"`..`"0.0"`) to `routeLayer`'s options to override it, or set `colorForNode: (system, security) => string` to control coloring per node yourself (this wins over `securityColors`). Coloring is driven by the optional `security` field bundled on each `SystemNode`; see `packages/core/README.md#examples` for the full option list.
+Writing your own is just implementing the `Layer` interface above -- see [packages/core/README.md#custom-layers](packages/core/README.md#custom-layers) for a full example (a hover highlight ring).
 
 ## Development
 

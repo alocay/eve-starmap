@@ -20,66 +20,28 @@ const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
 renderer.draw()
 ```
 
-## Custom data
+## Layers
 
-Pass your own `UniverseData` (`{ systems: SystemNode[], stargates: StargateEdge[] }`) instead of `defaultUniverseData` to use a different or fresher dataset. Invalid data throws at construction time.
+A `Layer` is just an object drawn on top of the base map each frame:
 
-`SystemNode` also carries an optional `security?: number` (raw, unrounded security status, e.g. `0.4531`) -- bundled on `defaultUniverseData` and used by `routeLayer` to color each route leg. It's optional so datasets/fixtures built before this field don't need updating.
-
-## Hover behavior
-
-`onSystemHover` (constructor option) covers the simple case. For multiple independent hover behaviors (a DOM tooltip, a canvas highlight layer, a side panel) that shouldn't have to know about each other, register each separately with `renderer.onHover()`:
-
-```js
-const unsubscribe = renderer.onHover((system, screenPos) => {
-  tooltipEl.style.display = system ? 'block' : 'none'
-  if (system) {
-    tooltipEl.textContent = system.name
-    tooltipEl.style.left = `${screenPos.x}px`
-    tooltipEl.style.top = `${screenPos.y}px`
-  }
-})
-
-// later, e.g. on unmount:
-unsubscribe()
-```
-
-`screenPos` is canvas-relative, so it drops straight into `position: absolute` inside a `position: relative` wrapper around the canvas.
-
-Every registered handler (plus `onSystemHover`, if set) runs on each pointermove — none of them overwrite each other. They also all fire with `(null, null)` when the pointer leaves the canvas entirely, so a tooltip/highlight doesn't stay stuck on the last-hovered system after the mouse moves off the map.
-
-## Examples
-
-**Tooltip on hover** — see [Hover behavior](#hover-behavior) above.
-
-**Highlight + label on hover** (drawn on canvas via the layer system, since layers redraw every frame and survive pan/zoom, unlike a one-off `ctx` call):
-
-```js
-let hovered = null
-
-const hoverLayer = {
-  id: 'hover-highlight',
-  draw(ctx, viewport, systems) {
-    if (!hovered) return
-    const x = (hovered.x - viewport.offsetX) * viewport.scale + viewport.width / 2
-    const y = (hovered.y - viewport.offsetY) * viewport.scale + viewport.height / 2
-    ctx.strokeStyle = '#ffd23f'
-    ctx.beginPath()
-    ctx.arc(x, y, 6, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.fillStyle = '#ffd23f'
-    ctx.fillText(hovered.name, x + 8, y - 8)
-  },
+```ts
+interface Layer {
+  id: string
+  draw(ctx: CanvasRenderingContext2D, viewport: Viewport, visibleSystems: SystemNode[]): void
+  focusSystemIds?: number[] // optional -- see "Zooming/panning to a set of systems" below
 }
-
-renderer.setLayers([...otherLayers, hoverLayer])
-renderer.onHover((system) => {
-  hovered = system
-  renderer.draw()
-})
 ```
 
-**Heatmap layer** (bundled, click to inspect):
+Four are bundled today, each detailed in its own section below:
+
+- **[Heatmap](#heatmap)** (`heatmapLayer`) -- per-system value visualization: flat circles whose color/opacity/radius scale with value.
+- **[Heatmap Area](#heatmap-area)** (`heatmapAreaLayer`) -- rounded, zoom-dependent merging area shapes for the same kind of data (blurred "gooey" blobs, or nested contour bands).
+- **[Region Labels](#region-labels)** (`regionLabelLayer`) -- draws each region's name at the centroid of its member systems.
+- **[Route](#route)** (`routeLayer` + `fetchRoute`) -- draws a jump route as a polyline, each leg colored by security status.
+
+Writing your own is just implementing the `Layer` interface above -- see [Custom layers](#custom-layers) for a full example.
+
+### Heatmap
 
 ```js
 import { StarmapRenderer, heatmapLayer, defaultUniverseData } from 'eve-starmap'
@@ -107,7 +69,9 @@ heatmapLayer(values, {
 })
 ```
 
-**Heatmap area** (bundled): an alternative to `heatmapLayer` -- instead of one flat circle per system, draws rounded, organically-merging area shapes around clustered heat sources. Because the merge radius is in screen pixels, blobs fuse together when zoomed out and separate into individual systems as you zoom in, with no extra logic needed:
+### Heatmap Area
+
+An alternative to [Heatmap](#heatmap) -- instead of one flat circle per system, draws rounded, organically-merging area shapes around clustered heat sources. Because the merge radius is in screen pixels, blobs fuse together when zoomed out and separate into individual systems as you zoom in, with no extra logic needed:
 
 ```js
 import { StarmapRenderer, heatmapAreaLayer, defaultUniverseData } from 'eve-starmap'
@@ -125,7 +89,9 @@ renderer.draw()
 - `bands` -- `'contour'`-only, clamped to 1-4. Default `2`. Ignored for `'gooey'`.
 - `blurPx` -- `'gooey'`-only. Default `radius * 0.3`.
 
-**Region labels** (bundled): draws each region's name at the centroid of its member systems -- regions have no 2D-projected position of their own in the SDE, only systems do, so this is computed from `defaultUniverseData.systems` rather than stored directly:
+### Region Labels
+
+Draws each region's name at the centroid of its member systems -- regions have no 2D-projected position of their own in the SDE, only systems do, so this is computed from `defaultUniverseData.systems` rather than stored directly:
 
 ```js
 import { StarmapRenderer, regionLabelLayer, defaultUniverseData } from 'eve-starmap'
@@ -151,7 +117,9 @@ regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems,
 })
 ```
 
-**Route layer** (bundled): draws the ordered jump route between two systems as a polyline, each leg a canvas gradient between its two endpoints' security-tier colors. `fetchRoute` fetches the route (ordered system ids, origin first) from EVE's public ESI `/route` endpoint -- no auth, no API key:
+### Route
+
+Draws the ordered jump route between two systems as a polyline, each leg a canvas gradient between its two endpoints' security-tier colors. `fetchRoute` fetches the route (ordered system ids, origin first) from EVE's public ESI `/route` endpoint -- no auth, no API key:
 
 ```js
 import { StarmapRenderer, fetchRoute, routeLayer, defaultUniverseData } from 'eve-starmap'
@@ -181,6 +149,63 @@ renderer.draw()
 - `missingColor` -- color used when a system's `security` is unknown, default `'#888'`.
 
 Like `heatmapLayer`, `routeLayer` sets `focusSystemIds` for you (the route's system ids in order), so `renderer.focusOn(route.focusSystemIds)` pans/zooms to fit the whole route.
+
+### Custom layers
+
+Any object implementing the `Layer` interface works, drawn on canvas via the layer system since layers redraw every frame and survive pan/zoom (unlike a one-off `ctx` call). For example, a highlight ring + label that follows hover state:
+
+```js
+let hovered = null
+
+const hoverLayer = {
+  id: 'hover-highlight',
+  draw(ctx, viewport, systems) {
+    if (!hovered) return
+    const x = (hovered.x - viewport.offsetX) * viewport.scale + viewport.width / 2
+    const y = (hovered.y - viewport.offsetY) * viewport.scale + viewport.height / 2
+    ctx.strokeStyle = '#ffd23f'
+    ctx.beginPath()
+    ctx.arc(x, y, 6, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.fillStyle = '#ffd23f'
+    ctx.fillText(hovered.name, x + 8, y - 8)
+  },
+}
+
+renderer.setLayers([...otherLayers, hoverLayer])
+renderer.onHover((system) => {
+  hovered = system
+  renderer.draw()
+})
+```
+
+## Custom data
+
+Pass your own `UniverseData` (`{ systems: SystemNode[], stargates: StargateEdge[] }`) instead of `defaultUniverseData` to use a different or fresher dataset. Invalid data throws at construction time.
+
+`SystemNode` also carries an optional `security?: number` (raw, unrounded security status, e.g. `0.4531`) -- bundled on `defaultUniverseData` and used by `routeLayer` to color each route leg. It's optional so datasets/fixtures built before this field don't need updating.
+
+## Hover behavior
+
+`onSystemHover` (constructor option) covers the simple case. For multiple independent hover behaviors (a DOM tooltip, a canvas highlight layer, a side panel) that shouldn't have to know about each other, register each separately with `renderer.onHover()`:
+
+```js
+const unsubscribe = renderer.onHover((system, screenPos) => {
+  tooltipEl.style.display = system ? 'block' : 'none'
+  if (system) {
+    tooltipEl.textContent = system.name
+    tooltipEl.style.left = `${screenPos.x}px`
+    tooltipEl.style.top = `${screenPos.y}px`
+  }
+})
+
+// later, e.g. on unmount:
+unsubscribe()
+```
+
+`screenPos` is canvas-relative, so it drops straight into `position: absolute` inside a `position: relative` wrapper around the canvas.
+
+Every registered handler (plus `onSystemHover`, if set) runs on each pointermove — none of them overwrite each other. They also all fire with `(null, null)` when the pointer leaves the canvas entirely, so a tooltip/highlight doesn't stay stuck on the last-hovered system after the mouse moves off the map.
 
 ## System dot stacking order
 
@@ -212,7 +237,7 @@ renderer.focusOn(layer.focusSystemIds) // == [...values.keys()], heatmapLayer se
 
 `Layer` has an optional `focusSystemIds?: number[]` property for exactly this — `heatmapLayer` fills it in automatically from its value map's keys, and any custom layer can set its own. The core renderer doesn't read it automatically (that auto-derivation lives in `eve-starmap-react`'s `EveStarmap`, see its README) — in vanilla usage, pass it to `focusOn()` yourself as above.
 
-See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search/heatmap+region-label toggles/route lookup).
+See `playground/` in the repo root for a full working demo (pan/zoom/click/hover/search, one tab per bundled layer, route lookup).
 
 ## License
 
