@@ -85,10 +85,41 @@
         background: #1a1f27;
         color: #e8a33d;
       }
-      #route-box {
+      #tabs {
         margin-top: 8px;
+      }
+      .tab {
         border-top: 1px solid #2a3340;
-        padding-top: 8px;
+      }
+      .tab:last-child {
+        border-bottom: 1px solid #2a3340;
+      }
+      .tab-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        background: none;
+        border: none;
+        color: #c8d0da;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 8px 2px;
+        cursor: pointer;
+        text-align: left;
+      }
+      .tab-header:hover {
+        color: #e8a33d;
+      }
+      .tab-header::after {
+        content: '\25b8';
+        transition: transform 0.15s ease;
+      }
+      .tab-header.open::after {
+        transform: rotate(90deg);
+      }
+      .tab-content {
+        padding: 0 2px 10px;
       }
       #route-box input {
         width: 100%;
@@ -134,19 +165,41 @@
       <div>Drag to pan, scroll to zoom, click a system.</div>
       <div>Hover: <span id="hovered">&mdash;</span></div>
       <div>Clicked: <span id="clicked">&mdash;</span></div>
-      <button id="toggle-heatmap">Toggle heatmap layer</button>
-      <button id="toggle-heatmap-area">Toggle heatmap-area layer (off)</button>
-      <button id="toggle-regions">Toggle region labels</button>
       <div id="search-box">
         <input id="search-input" type="text" placeholder="Search system name..." autocomplete="off" />
         <ul id="suggestions" hidden></ul>
       </div>
-      <div id="route-box">
-        <input id="route-origin" type="text" placeholder="Origin: id or name" />
-        <input id="route-destination" type="text" placeholder="Destination: id or name" />
-        <button id="route-show">Show route</button>
-        <label><input id="route-gradient" type="checkbox" checked /> Gradient</label>
-        <span id="route-status"></span>
+      <div id="tabs">
+        <div class="tab">
+          <button class="tab-header" data-tab="heatmap">Heatmap</button>
+          <div class="tab-content" data-tab-content="heatmap" hidden>
+            <button id="toggle-heatmap">Toggle heatmap layer</button>
+          </div>
+        </div>
+        <div class="tab">
+          <button class="tab-header" data-tab="heatmap-area">Heatmap Area</button>
+          <div class="tab-content" data-tab-content="heatmap-area" hidden>
+            <button id="toggle-heatmap-area">Toggle heatmap-area layer (off)</button>
+          </div>
+        </div>
+        <div class="tab">
+          <button class="tab-header" data-tab="regions">Region Labels</button>
+          <div class="tab-content" data-tab-content="regions" hidden>
+            <button id="toggle-regions">Toggle region labels</button>
+          </div>
+        </div>
+        <div class="tab">
+          <button class="tab-header" data-tab="route">Route</button>
+          <div class="tab-content" data-tab-content="route" hidden>
+            <div id="route-box">
+              <input id="route-origin" type="text" placeholder="Origin: id or name" />
+              <input id="route-destination" type="text" placeholder="Destination: id or name" />
+              <button id="route-show">Show route</button>
+              <label><input id="route-gradient" type="checkbox" checked /> Gradient</label>
+              <span id="route-status"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="tooltip" hidden></div>

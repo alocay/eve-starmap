@@ -23,6 +23,21 @@ const routeShowBtn = document.getElementById('route-show')
 const routeStatusEl = document.getElementById('route-status')
 const routeGradientCheckbox = document.getElementById('route-gradient')
 
+// Left-side accordion: one tab per layer, only one open at a time. Purely a
+// display concern -- every control keeps its existing id, so none of the
+// layer-toggle/route logic below needs to know tabs exist.
+document.querySelectorAll('.tab-header').forEach(header => {
+  header.addEventListener('click', () => {
+    const wasOpen = header.classList.contains('open')
+    document.querySelectorAll('.tab-header').forEach(h => h.classList.remove('open'))
+    document.querySelectorAll('.tab-content').forEach(c => { c.hidden = true })
+    if (!wasOpen) {
+      header.classList.add('open')
+      document.querySelector(`[data-tab-content="${header.dataset.tab}"]`).hidden = false
+    }
+  })
+})
+
 function computeBounds(systems) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (const s of systems) {
