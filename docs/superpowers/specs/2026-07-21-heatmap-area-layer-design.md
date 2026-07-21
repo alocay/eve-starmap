@@ -76,9 +76,16 @@ Two-pass technique so shape and color don't interfere with each other:
 2. **Color fill** (crisp, no blur): on a second offscreen canvas, draw each
    system's own `ctx.createRadialGradient(x, y, 0, x, y, radius * 1.6)` —
    center stop = that system's heat color (via the shared color scale, using
-   its value), outer stop = transparent base color. Composited with
-   `globalCompositeOperation = 'lighter'` so overlapping gradients from nearby
-   sources add together rather than one flatly overwriting another.
+   its value), outer stop = transparent base color. Composited with the
+   default `globalCompositeOperation = 'source-over'` (bounded alpha
+   blending). *Amendment (post-manual-testing): the original design called
+   for `'lighter'` (additive) so overlapping gradients from nearby sources
+   would add together, but with many sources close together on screen (e.g.
+   zoomed far out over a dense dataset) additive blending sums every
+   overlapping gradient's RGB and saturates to solid white well before any
+   individual source reaches its own hot color. `'source-over'` is bounded —
+   it can't exceed opaque regardless of how many gradients overlap — so
+   nearby glows still layer visually without ever washing out.*
 3. **Combine:** composite the color canvas onto the mask canvas with
    `globalCompositeOperation = 'destination-in'` — this clips the gradient
    color down to exactly the merged goo silhouette from step 1. Draw the
@@ -133,8 +140,8 @@ Pure math pulled into small exported helper functions (same pattern as
 - `focusSystemIds` equals the value map's keys (including empty-map case).
 - `style: 'gooey'`: `ctx.filter` gets set to a string containing `blur(` and
   `contrast(`; `createRadialGradient` called once per system with a value;
-  `globalCompositeOperation` set to `'lighter'` then `'destination-in'` in
-  order.
+  `globalCompositeOperation` set to `'source-over'` then `'destination-in'`
+  in order.
 - `style: 'contour'` (default when omitted): `createImageData`/`putImageData`
   called; grid size scales with viewport `width`/`height`; `bands` option
   changes number of threshold levels used (assert via a spy on the internal

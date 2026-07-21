@@ -106,7 +106,7 @@ describe('heatmapAreaLayer', () => {
       expect(colorCtx.gradient.addColorStop).toHaveBeenCalledWith(1, expect.stringMatching(/^rgba\(.+, 0\)$/))
     })
 
-    it('composites gradients with "lighter" then clips to the mask with "destination-in"', () => {
+    it('composites gradients with "source-over" (not additive) then clips to the mask with "destination-in"', () => {
       const { factory, canvases } = makeFakeCanvasFactory()
       const layer = heatmapAreaLayer(new Map([[1, 100]]), {
         style: 'gooey', createOffscreenCanvas: factory, radius: 10,
@@ -115,7 +115,7 @@ describe('heatmapAreaLayer', () => {
 
       layer.draw(ctx as any, viewport, [sys(1, 0, 0)])
 
-      expect(canvases[1].ctx.compositeLog).toEqual(['lighter', 'destination-in'])
+      expect(canvases[1].ctx.compositeLog).toEqual(['source-over', 'destination-in'])
       expect(canvases[1].ctx.drawImage).toHaveBeenCalledWith(canvases[0], 0, 0)
     })
 

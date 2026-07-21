@@ -119,7 +119,11 @@ function drawGooey(
   const color = createOffscreenCanvas(w, h)
   const colorCtx = color.getContext('2d')
   if (!colorCtx) return
-  colorCtx.globalCompositeOperation = 'lighter'
+  // 'source-over' (bounded alpha blending), not 'lighter' (additive): with many
+  // sources close together on screen (e.g. zoomed far out), additive blending
+  // sums every overlapping gradient's RGB and saturates to white well before
+  // any single source reaches full color.
+  colorCtx.globalCompositeOperation = 'source-over'
   const transparentBase = toTransparent(baseColor)
   const reach = radius * GOOEY_GRADIENT_REACH
   for (const p of points) {

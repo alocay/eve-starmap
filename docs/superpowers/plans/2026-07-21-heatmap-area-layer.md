@@ -854,3 +854,9 @@ Expected: all tests pass, including the new `heatmapAreaMath.test.ts` and `heatm
 git add packages/core/src/index.ts packages/core/README.md README.md playground/index.html playground/main.js
 git commit -m "feat: export heatmapAreaLayer, document it, and wire up a playground toggle"
 ```
+
+---
+
+## Post-completion amendment (found during manual playground testing)
+
+Task 2's `drawGooey` (Step 7 above) originally set `colorCtx.globalCompositeOperation = 'lighter'` before drawing each source's radial gradient, so overlapping gradients from nearby sources would add together. With the playground's richer, clustered demo data (added after this plan's execution — several real stargate-adjacent clusters, all visible at once when zoomed out to the full galaxy), that additive blending saturated to solid white wherever two or more sources' gradients overlapped, since `'lighter'` sums RGB channels unboundedly. Changed to `'source-over'` (the canvas default, bounded alpha blending) in both `heatmapAreaLayer.ts` and its test (the `compositeLog` assertion now expects `['source-over', 'destination-in']`). The design spec (`docs/superpowers/specs/2026-07-21-heatmap-area-layer-design.md`) was updated to match. Nothing else in this plan changed.
