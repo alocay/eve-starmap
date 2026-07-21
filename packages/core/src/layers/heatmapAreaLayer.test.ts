@@ -106,6 +106,26 @@ describe('heatmapAreaLayer', () => {
       expect(colorCtx.gradient.addColorStop).toHaveBeenCalledWith(1, expect.stringMatching(/^rgba\(.+, 0\)$/))
     })
 
+    it('fades a low-value source\'s own gradient center toward transparent, not a solid opaque blob', () => {
+      const { factory, canvases } = makeFakeCanvasFactory()
+      const layer = heatmapAreaLayer(new Map([[1, 0], [2, 100]]), {
+        style: 'gooey', createOffscreenCanvas: factory, radius: 10,
+      })
+      const ctx = makeMockCtx()
+
+      layer.draw(ctx as any, viewport, [sys(1, 0, 0), sys(2, 10, 10)])
+
+      const colorCtx = canvases[1].ctx
+      const centerStopCalls = colorCtx.gradient.addColorStop.mock.calls.filter((call: any[]) => call[0] === 0)
+      const coldCenter = centerStopCalls[0][1] as string
+      const hotCenter = centerStopCalls[1][1] as string
+      const alphaOf = (rgba: string) => Number(rgba.match(/[\d.]+(?=\)$)/)![0])
+
+      expect(alphaOf(coldCenter)).toBeLessThan(alphaOf(hotCenter))
+      expect(alphaOf(coldCenter)).toBeCloseTo(0)
+      expect(alphaOf(hotCenter)).toBeCloseTo(1)
+    })
+
     it('composites gradients with "source-over" (not additive) then clips to the mask with "destination-in"', () => {
       const { factory, canvases } = makeFakeCanvasFactory()
       const layer = heatmapAreaLayer(new Map([[1, 100]]), {

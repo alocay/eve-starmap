@@ -76,7 +76,13 @@ Two-pass technique so shape and color don't interfere with each other:
 2. **Color fill** (crisp, no blur): on a second offscreen canvas, draw each
    system's own `ctx.createRadialGradient(x, y, 0, x, y, radius * 1.6)` —
    center stop = that system's heat color (via the shared color scale, using
-   its value), outer stop = transparent base color. Composited with the
+   its value), outer stop = transparent base color. The color scale defaults
+   `opacityMin` to `0` (unless the caller sets their own), so the center
+   stop's own alpha fades toward transparent for low-value sources instead of
+   always being fully opaque — otherwise a "cold" source still renders as a
+   solid, dark-palette-colored blob (`#1a1f27` by default, easily mistaken for
+   solid grey/black against a dark map background) rather than reading as
+   faint/absent heat. Composited with the
    default `globalCompositeOperation = 'source-over'` (bounded alpha
    blending). *Amendment (post-manual-testing): the original design called
    for `'lighter'` (additive) so overlapping gradients from nearby sources

@@ -60,7 +60,11 @@ interface Point {
 
 export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAreaLayerOptions = {}): Layer {
   const rawValues = [...values.values()]
-  const colorFor = createColorScale(rawValues, options)
+  // Default opacityMin to 0 (unless the caller set their own) so a gooey
+  // source's own gradient center fades toward invisible for low relative
+  // heat, instead of always being a fully-opaque, dark-palette-colored blob
+  // that reads as "solid grey/black" against a dark map background.
+  const colorFor = createColorScale(rawValues, { ...options, opacityMin: options.opacityMin ?? 0 })
   const bandColorFor = createColorScale([], { palette: options.palette, min: 0, max: 1, opacityMin: options.opacityMin, opacityMax: options.opacityMax })
   const fieldScale = createValueScale(rawValues, { min: options.min ?? 0, max: options.max })
   const style = options.style ?? 'contour'
