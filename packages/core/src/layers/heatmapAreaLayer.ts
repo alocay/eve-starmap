@@ -1,7 +1,7 @@
 import type { Layer, SystemNode, Viewport } from '../types.js'
-import { createColorScale, createValueScale, lerp, type ColorScaleOptions } from '../colorScale.js'
+import { createColorScale, lerp, type ColorScaleOptions } from '../colorScale.js'
 import { worldToScreen } from '../viewport.js'
-import { bandThresholds, fieldContribution, parseRgb, smoothstep, toTransparent } from './heatmapAreaMath.js'
+import { bandThresholds, createFieldScale, fieldContribution, parseRgb, smoothstep, toTransparent } from './heatmapAreaMath.js'
 
 export interface OffscreenCtx2DLike {
   fillStyle: string | CanvasGradient
@@ -66,7 +66,7 @@ export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAr
   // that reads as "solid grey/black" against a dark map background.
   const colorFor = createColorScale(rawValues, { ...options, opacityMin: options.opacityMin ?? 0 })
   const bandColorFor = createColorScale([], { palette: options.palette, min: 0, max: 1 })
-  const fieldScale = createValueScale(rawValues, { min: options.min ?? 0, max: options.max })
+  const fieldScale = createFieldScale(rawValues, { min: options.min, max: options.max })
   // Contour's per-band alpha ceiling (0.3, 0.45, 0.6, 0.75 by default -- each
   // band a bit more opaque than the last) is scaled by opacityMin/opacityMax
   // so those options actually affect contour too, not just gooey. Defaults to

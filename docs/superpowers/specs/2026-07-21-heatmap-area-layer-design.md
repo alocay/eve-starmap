@@ -140,6 +140,24 @@ entirely), so those options silently did nothing for `contour` despite being
 documented as shared across styles. Fixed by applying them directly to the
 per-band alpha ceiling instead.*
 
+*Amendment (found via a real consumer integration, sov-losses): `value(s)` in
+the field formula above was normalized against a fixed `[0, max]` range
+(floored at 0, not auto-detected), matching how a single isolated source
+should read as fully hot. But for a multi-source, heavily skewed dataset
+(real-world example: ISK loss values, where one capital/structure loss can
+dwarf everyday losses by 100-1000x), this let legitimately-present, non-zero
+values normalize so low relative to the dataset's max that they never cleared
+band 1's threshold at all -- they rendered nothing, not even a faint mark,
+silently dropping real data points from the visualization. Fixed by
+normalizing against the *observed* `[min, max]` range (like `heatmapLayer`'s
+color scale already does) mapped onto `[0.25, 1]` instead of `[0, 1]` -- 0.25
+is comfortably above the ~0.2125 a value needs to clear band 1's threshold
+standing alone, so every value in the map is now guaranteed some visible
+mark, with hotter values still showing proportionally more. A single distinct
+value (or several equal ones) still maps to 1, unchanged. New pure function:
+`createFieldScale` in `heatmapAreaMath.ts`, replacing the ad-hoc
+`createValueScale(rawValues, { min: options.min ?? 0, ... })` call.*
+
 ## Testing (vitest, matching existing suite)
 
 Pure math pulled into small exported helper functions (same pattern as

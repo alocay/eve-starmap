@@ -89,6 +89,8 @@ renderer.draw()
 - `bands` -- `'contour'`-only, clamped to 1-4. Default `2`. Ignored for `'gooey'`.
 - `blurPx` -- `'gooey'`-only. Default `radius * 0.3`.
 
+`'contour'` normalizes each source's value against the *observed* range of values in the map (auto-detected, or `min`/`max` if you set them), same as `heatmapLayer`'s color scale -- not against a fixed zero floor. This guarantees every value you pass in produces at least some visible mark, however small it is next to the largest value in the same map; a single value (or several equal ones) always renders fully hot. You never need to pre-scale skewed data (e.g. ISK values, where one loss can dwarf everyday ones by orders of magnitude) just to keep smaller-but-real values from disappearing.
+
 ### Region Labels
 
 Draws each region's name at the centroid of its member systems -- regions have no 2D-projected position of their own in the SDE, only systems do, so this is computed from `defaultUniverseData.systems` rather than stored directly:

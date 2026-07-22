@@ -267,6 +267,31 @@ describe('heatmapAreaLayer', () => {
       expect(img.data[farIdx + 3]).toBe(0)
     })
 
+    it('renders a heavily skewed low value, not just the ones near the dataset max (regression test for sov-losses missing-systems bug)', () => {
+      const { factory, canvases } = makeFakeCanvasFactory()
+      // A viewport wide enough to place two sources 300 screen-px apart, far
+      // enough that neither's own field contribution meaningfully bleeds into
+      // the other's cell -- isolates each source's own visibility.
+      const wideViewport = { offsetX: 150, offsetY: 0, scale: 1, width: 400, height: 100 }
+      // 1 vs 100,000 -- a 100,000x skew, similar in spirit to a capital ship
+      // loss dwarfing an everyday frigate loss in the same ISK dataset.
+      const layer = heatmapAreaLayer(new Map([[1, 1], [2, 100_000]]), {
+        style: 'contour', createOffscreenCanvas: factory, radius: 40,
+      })
+      const ctx = makeMockCtx()
+
+      // world (0,0) -> screen (50, 50); world (300,0) -> screen (350, 50)
+      layer.draw(ctx as any, wideViewport, [sys(1, 0, 0), sys(2, 300, 0)])
+
+      const img = canvases[0].ctx.putImageData.mock.calls[0][0]
+      const gw = canvases[0].width
+      const lowValueIdx = (Math.round(50 / 4) * gw + Math.round(50 / 4)) * 4
+      const highValueIdx = (Math.round(50 / 4) * gw + Math.round(350 / 4)) * 4
+
+      expect(img.data[lowValueIdx + 3]).toBeGreaterThan(0)
+      expect(img.data[highValueIdx + 3]).toBeGreaterThan(0)
+    })
+
     it('upscales the field grid onto the main ctx at full viewport size', () => {
       const { factory, canvases } = makeFakeCanvasFactory()
       const layer = heatmapAreaLayer(new Map([[1, 100]]), { style: 'contour', createOffscreenCanvas: factory })
