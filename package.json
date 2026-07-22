@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "vitest run"
+    "test": "vitest run",
+    "release": "node scripts/release.js"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
