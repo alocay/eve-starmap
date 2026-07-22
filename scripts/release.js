@@ -17,15 +17,23 @@ const REACT_DIR = `${ROOT}/packages/react`
 const CORE_PKG = `${CORE_DIR}/package.json`
 const REACT_PKG = `${REACT_DIR}/package.json`
 
+// git.exe runs directly on Windows and needs no shell -- shell:true would
+// make Node join argv into one string without escaping (see DEP0190), which
+// silently word-splits any arg containing spaces (e.g. a commit message).
+// npm resolves to npm.cmd on Windows, which does need shell:true to spawn at
+// all; its args here are always single tokens (versions, flags), so the
+// word-splitting risk that makes shell:true unsafe for git doesn't apply.
+const NPM_SHELL = process.platform === 'win32'
+
 function run(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32', ...opts })
+  const result = spawnSync(cmd, args, { stdio: 'inherit', ...opts })
   if (result.status !== 0) {
     throw new Error(`${cmd} ${args.join(' ')} failed with exit code ${result.status}`)
   }
 }
 
 function runCapture(cmd, args, opts = {}) {
-  return execFileSync(cmd, args, { encoding: 'utf8', shell: process.platform === 'win32', ...opts }).trim()
+  return execFileSync(cmd, args, { encoding: 'utf8', ...opts }).trim()
 }
 
 function readJson(path) {
@@ -73,16 +81,16 @@ async function main() {
   }
 
   console.log('\n== npm login ==')
-  run('npm', ['login'])
-  const whoami = runCapture('npm', ['whoami'])
+  run('npm', ['login'], { shell: NPM_SHELL })
+  const whoami = runCapture('npm', ['whoami'], { shell: NPM_SHELL })
   console.log(`Logged in to npm as ${whoami}`)
 
   console.log('\n== build + test ==')
-  run('npm', ['run', 'build'], { cwd: ROOT })
-  run('npm', ['test'], { cwd: ROOT })
+  run('npm', ['run', 'build'], { cwd: ROOT, shell: NPM_SHELL })
+  run('npm', ['test'], { cwd: ROOT, shell: NPM_SHELL })
 
   console.log(`\n== bumping packages/core to "${bump}" ==`)
-  run('npm', ['version', bump, '--no-git-tag-version'], { cwd: CORE_DIR })
+  run('npm', ['version', bump, '--no-git-tag-version'], { cwd: CORE_DIR, shell: NPM_SHELL })
   const newVersion = readJson(CORE_PKG).version
 
   const existingTags = runCapture('git', ['tag', '-l', `v${newVersion}`], { cwd: ROOT })
@@ -98,7 +106,7 @@ async function main() {
   writeJson(REACT_PKG, reactPkg)
 
   console.log('\n== syncing package-lock.json ==')
-  run('npm', ['install', '--package-lock-only'], { cwd: ROOT })
+  run('npm', ['install', '--package-lock-only'], { cwd: ROOT, shell: NPM_SHELL })
 
   console.log(`\nAbout to release eve-starmap + eve-starmap-react @ ${newVersion}:`)
   run('git', ['diff', '--', 'packages/core/package.json', 'packages/react/package.json'], { cwd: ROOT })
@@ -116,10 +124,10 @@ async function main() {
   run('git', ['push', 'origin', 'main', '--follow-tags'], { cwd: ROOT })
 
   console.log('\n== publish eve-starmap ==')
-  run('npm', ['publish', '--access', 'public'], { cwd: CORE_DIR })
+  run('npm', ['publish', '--access', 'public'], { cwd: CORE_DIR, shell: NPM_SHELL })
 
   console.log('\n== publish eve-starmap-react ==')
-  run('npm', ['publish', '--access', 'public'], { cwd: REACT_DIR })
+  run('npm', ['publish', '--access', 'public'], { cwd: REACT_DIR, shell: NPM_SHELL })
 
   console.log(`\nDone. Released v${newVersion}:`)
   console.log(`  https://www.npmjs.com/package/eve-starmap/v/${newVersion}`)
