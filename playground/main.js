@@ -124,7 +124,7 @@ function updateLayers() {
   const layers = [highlightLayer]
   if (regionsOn) layers.push(demoRegionLabelLayer)
   if (activeHeatmap === 'heatmap') layers.push(demoHeatmapLayer)
-  if (activeHeatmap === 'contour' || activeHeatmap === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapValues, { style: activeHeatmap, bands: 4, radius: 18 }))
+  if (activeHeatmap === 'contour' || activeHeatmap === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapValues, { style: activeHeatmap, bands: 4, radius: 20 }))
   if (currentRouteLayer) layers.push(currentRouteLayer)
   renderer.setLayers(layers)
 }
