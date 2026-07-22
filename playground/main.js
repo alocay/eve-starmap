@@ -13,7 +13,8 @@ const hoveredEl = document.getElementById('hovered')
 const clickedEl = document.getElementById('clicked')
 const toggleBtn = document.getElementById('toggle-heatmap')
 const toggleRegionsBtn = document.getElementById('toggle-regions')
-const toggleHeatmapAreaBtn = document.getElementById('toggle-heatmap-area')
+const toggleHeatmapAreaGooeyBtn = document.getElementById('toggle-heatmap-area-gooey')
+const toggleHeatmapAreaContourBtn = document.getElementById('toggle-heatmap-area-contour')
 const searchInput = document.getElementById('search-input')
 const suggestionsEl = document.getElementById('suggestions')
 const tooltipEl = document.getElementById('tooltip')
@@ -138,7 +139,9 @@ const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.syste
 const demoHeatmapAreaValues = buildDemoHeatmapAreaData(defaultUniverseData)
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 let heatmapOn = false
-// 'off' | 'gooey' | 'contour' -- cycles on each click of the heatmap-area toggle.
+// 'off' | 'gooey' | 'contour' -- gooey and contour are separate toggle buttons
+// that share this one mode: turning one on turns the other off (if it was on),
+// but turning one off never turns the other on.
 let heatmapAreaMode = 'off'
 let regionsOn = false
 let currentRouteLayer = null
@@ -238,10 +241,21 @@ toggleRegionsBtn.addEventListener('click', () => {
   toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
 })
 
-toggleHeatmapAreaBtn.addEventListener('click', () => {
-  heatmapAreaMode = heatmapAreaMode === 'off' ? 'gooey' : heatmapAreaMode === 'gooey' ? 'contour' : 'off'
+function updateHeatmapAreaButtons() {
+  toggleHeatmapAreaGooeyBtn.textContent = heatmapAreaMode === 'gooey' ? 'Hide gooey' : 'Toggle gooey'
+  toggleHeatmapAreaContourBtn.textContent = heatmapAreaMode === 'contour' ? 'Hide contour' : 'Toggle contour'
+}
+
+toggleHeatmapAreaGooeyBtn.addEventListener('click', () => {
+  heatmapAreaMode = heatmapAreaMode === 'gooey' ? 'off' : 'gooey'
   updateLayers()
-  toggleHeatmapAreaBtn.textContent = `Toggle heatmap-area layer (${heatmapAreaMode})`
+  updateHeatmapAreaButtons()
+})
+
+toggleHeatmapAreaContourBtn.addEventListener('click', () => {
+  heatmapAreaMode = heatmapAreaMode === 'contour' ? 'off' : 'contour'
+  updateLayers()
+  updateHeatmapAreaButtons()
 })
 
 // Route lookup: fetches a live route from ESI, then adds the route layer into
