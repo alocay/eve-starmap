@@ -138,12 +138,13 @@ function resolveSystemId(input) {
 const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
 const demoHeatmapAreaValues = buildDemoHeatmapAreaData(defaultUniverseData)
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
-// null | 'contour' | 'gooey' | 'heatmap' | 'regions' -- these four layer
-// toggles are mutually exclusive: turning one on turns off whichever of the
-// others was on, but turning one off never turns another on. Route is
-// independent of this and layers on top of whichever of these is active (or
-// none), so it isn't part of this state.
-let activeLayer = 'contour'
+// null | 'contour' | 'gooey' | 'heatmap' -- the three heatmap toggles are
+// mutually exclusive: turning one on turns off whichever of the others was
+// on, but turning one off never turns another on.
+let activeHeatmap = 'contour'
+// Independent of activeHeatmap and route -- all three can be on at once, to
+// show how layers stack.
+let regionsOn = false
 let currentRouteLayer = null
 let currentRouteIds = null // cached so the gradient toggle can rebuild without re-fetching
 let highlightedSystemId = null
@@ -170,9 +171,9 @@ const highlightLayer = {
 
 function updateLayers() {
   const layers = [highlightLayer]
-  if (activeLayer === 'regions') layers.push(demoRegionLabelLayer)
-  if (activeLayer === 'heatmap') layers.push(demoHeatmapLayer)
-  if (activeLayer === 'contour' || activeLayer === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: activeLayer, bands: 4 }))
+  if (regionsOn) layers.push(demoRegionLabelLayer)
+  if (activeHeatmap === 'heatmap') layers.push(demoHeatmapLayer)
+  if (activeHeatmap === 'contour' || activeHeatmap === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: activeHeatmap, bands: 4 }))
   if (currentRouteLayer) layers.push(currentRouteLayer)
   renderer.setLayers(layers)
 }
@@ -227,28 +228,34 @@ const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
 canvas.addEventListener('pointerdown', hideTooltip)
 canvas.addEventListener('wheel', hideTooltip)
 
-const layerToggleButtons = {
+const heatmapToggleButtons = {
   contour: toggleHeatmapAreaContourBtn,
   gooey: toggleHeatmapAreaGooeyBtn,
   heatmap: toggleBtn,
-  regions: toggleRegionsBtn,
 }
 
 function updateLayerToggleButtons() {
-  for (const [key, btn] of Object.entries(layerToggleButtons)) {
-    btn.classList.toggle('active', activeLayer === key)
+  for (const [key, btn] of Object.entries(heatmapToggleButtons)) {
+    btn.classList.toggle('active', activeHeatmap === key)
   }
+  toggleRegionsBtn.classList.toggle('active', regionsOn)
 }
 
-function setActiveLayer(key) {
-  activeLayer = activeLayer === key ? null : key
+function setActiveHeatmap(key) {
+  activeHeatmap = activeHeatmap === key ? null : key
   updateLayers()
   updateLayerToggleButtons()
 }
 
-for (const [key, btn] of Object.entries(layerToggleButtons)) {
-  btn.addEventListener('click', () => setActiveLayer(key))
+for (const [key, btn] of Object.entries(heatmapToggleButtons)) {
+  btn.addEventListener('click', () => setActiveHeatmap(key))
 }
+
+toggleRegionsBtn.addEventListener('click', () => {
+  regionsOn = !regionsOn
+  updateLayers()
+  updateLayerToggleButtons()
+})
 
 updateLayers()
 updateLayerToggleButtons()
