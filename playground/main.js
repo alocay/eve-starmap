@@ -24,9 +24,9 @@ const routeShowBtn = document.getElementById('route-show')
 const routeStatusEl = document.getElementById('route-status')
 const routeGradientCheckbox = document.getElementById('route-gradient')
 
-// Left-side accordion: one tab per layer, only one open at a time. Purely a
-// display concern -- every control keeps its existing id, so none of the
-// layer-toggle/route logic below needs to know tabs exist.
+// Left-side accordion -- only Route uses it now (the layer toggles are plain
+// buttons above it), but this stays generic over .tab-header/.tab-content in
+// case another expandable section is added later.
 document.querySelectorAll('.tab-header').forEach(header => {
   header.addEventListener('click', () => {
     const wasOpen = header.classList.contains('open')
@@ -138,12 +138,12 @@ function resolveSystemId(input) {
 const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
 const demoHeatmapAreaValues = buildDemoHeatmapAreaData(defaultUniverseData)
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
-let heatmapOn = false
-// 'off' | 'gooey' | 'contour' -- gooey and contour are separate toggle buttons
-// that share this one mode: turning one on turns the other off (if it was on),
-// but turning one off never turns the other on.
-let heatmapAreaMode = 'off'
-let regionsOn = false
+// null | 'contour' | 'gooey' | 'heatmap' | 'regions' -- these four layer
+// toggles are mutually exclusive: turning one on turns off whichever of the
+// others was on, but turning one off never turns another on. Route is
+// independent of this and layers on top of whichever of these is active (or
+// none), so it isn't part of this state.
+let activeLayer = 'contour'
 let currentRouteLayer = null
 let currentRouteIds = null // cached so the gradient toggle can rebuild without re-fetching
 let highlightedSystemId = null
@@ -170,9 +170,9 @@ const highlightLayer = {
 
 function updateLayers() {
   const layers = [highlightLayer]
-  if (regionsOn) layers.push(demoRegionLabelLayer)
-  if (heatmapOn) layers.push(demoHeatmapLayer)
-  if (heatmapAreaMode !== 'off') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: heatmapAreaMode, bands: 4 }))
+  if (activeLayer === 'regions') layers.push(demoRegionLabelLayer)
+  if (activeLayer === 'heatmap') layers.push(demoHeatmapLayer)
+  if (activeLayer === 'contour' || activeLayer === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: activeLayer, bands: 4 }))
   if (currentRouteLayer) layers.push(currentRouteLayer)
   renderer.setLayers(layers)
 }
@@ -227,36 +227,31 @@ const renderer = new StarmapRenderer(canvas, defaultUniverseData, {
 canvas.addEventListener('pointerdown', hideTooltip)
 canvas.addEventListener('wheel', hideTooltip)
 
-renderer.draw()
-
-toggleBtn.addEventListener('click', () => {
-  heatmapOn = !heatmapOn
-  updateLayers()
-  toggleBtn.textContent = heatmapOn ? 'Hide heatmap layer' : 'Toggle heatmap layer'
-})
-
-toggleRegionsBtn.addEventListener('click', () => {
-  regionsOn = !regionsOn
-  updateLayers()
-  toggleRegionsBtn.textContent = regionsOn ? 'Hide region labels' : 'Toggle region labels'
-})
-
-function updateHeatmapAreaButtons() {
-  toggleHeatmapAreaGooeyBtn.textContent = heatmapAreaMode === 'gooey' ? 'Hide gooey' : 'Toggle gooey'
-  toggleHeatmapAreaContourBtn.textContent = heatmapAreaMode === 'contour' ? 'Hide contour' : 'Toggle contour'
+const layerToggleButtons = {
+  contour: toggleHeatmapAreaContourBtn,
+  gooey: toggleHeatmapAreaGooeyBtn,
+  heatmap: toggleBtn,
+  regions: toggleRegionsBtn,
 }
 
-toggleHeatmapAreaGooeyBtn.addEventListener('click', () => {
-  heatmapAreaMode = heatmapAreaMode === 'gooey' ? 'off' : 'gooey'
-  updateLayers()
-  updateHeatmapAreaButtons()
-})
+function updateLayerToggleButtons() {
+  for (const [key, btn] of Object.entries(layerToggleButtons)) {
+    btn.classList.toggle('active', activeLayer === key)
+  }
+}
 
-toggleHeatmapAreaContourBtn.addEventListener('click', () => {
-  heatmapAreaMode = heatmapAreaMode === 'contour' ? 'off' : 'contour'
+function setActiveLayer(key) {
+  activeLayer = activeLayer === key ? null : key
   updateLayers()
-  updateHeatmapAreaButtons()
-})
+  updateLayerToggleButtons()
+}
+
+for (const [key, btn] of Object.entries(layerToggleButtons)) {
+  btn.addEventListener('click', () => setActiveLayer(key))
+}
+
+updateLayers()
+updateLayerToggleButtons()
 
 // Route lookup: fetches a live route from ESI, then adds the route layer into
 // the same updateLayers() combiner every other toggle uses (so it composes

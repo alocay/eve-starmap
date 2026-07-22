@@ -38,6 +38,20 @@
       #panel button:hover {
         border-color: #e8a33d;
       }
+      #layer-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      #layer-toggles button {
+        margin-top: 0;
+      }
+      .layer-toggle.active {
+        background: #2a1f10;
+        border-color: #e8a33d;
+        color: #e8a33d;
+      }
       #hovered,
       #clicked {
         color: #e8a33d;
@@ -169,26 +183,13 @@
         <input id="search-input" type="text" placeholder="Search system name..." autocomplete="off" />
         <ul id="suggestions" hidden></ul>
       </div>
+      <div id="layer-toggles">
+        <button id="toggle-heatmap-area-contour" class="layer-toggle">Heatmap</button>
+        <button id="toggle-heatmap-area-gooey" class="layer-toggle">Heatmap - gooey</button>
+        <button id="toggle-heatmap" class="layer-toggle">Basic Heatmap</button>
+        <button id="toggle-regions" class="layer-toggle">Region Labels</button>
+      </div>
       <div id="tabs">
-        <div class="tab">
-          <button class="tab-header" data-tab="heatmap">Heatmap</button>
-          <div class="tab-content" data-tab-content="heatmap" hidden>
-            <button id="toggle-heatmap">Toggle heatmap layer</button>
-          </div>
-        </div>
-        <div class="tab">
-          <button class="tab-header" data-tab="heatmap-area">Heatmap Area</button>
-          <div class="tab-content" data-tab-content="heatmap-area" hidden>
-            <button id="toggle-heatmap-area-gooey">Toggle gooey</button>
-            <button id="toggle-heatmap-area-contour">Toggle contour</button>
-          </div>
-        </div>
-        <div class="tab">
-          <button class="tab-header" data-tab="regions">Region Labels</button>
-          <div class="tab-content" data-tab-content="regions" hidden>
-            <button id="toggle-regions">Toggle region labels</button>
-          </div>
-        </div>
         <div class="tab">
           <button class="tab-header" data-tab="route">Route</button>
           <div class="tab-content" data-tab-content="route" hidden>
