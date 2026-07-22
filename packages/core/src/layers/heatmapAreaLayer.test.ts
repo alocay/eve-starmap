@@ -109,15 +109,15 @@ describe('heatmapAreaLayer', () => {
       expect(canvases[0].ctx.arc).toHaveBeenCalledWith(50, 50, 10, 0, Math.PI * 2)
     })
 
-    it('uses default radius (40) and blurPx (radius * 0.3) when not specified', () => {
+    it('uses default radius (18) and blurPx (radius * 0.3) when not specified', () => {
       const { factory, canvases } = makeFakeCanvasFactory()
       const layer = heatmapAreaLayer(new Map([[1, 100]]), { style: 'gooey', createOffscreenCanvas: factory })
       const ctx = makeMockCtx()
 
       layer.draw(ctx as any, viewport, [sys(1, 0, 0)])
 
-      expect(canvases[0].ctx.arc).toHaveBeenCalledWith(50, 50, 40, 0, Math.PI * 2)
-      expect(canvases[0].ctx.filter).toBe('blur(12px) contrast(28)')
+      expect(canvases[0].ctx.arc).toHaveBeenCalledWith(50, 50, 18, 0, Math.PI * 2)
+      expect(canvases[0].ctx.filter).toBe('blur(5.3999999999999995px) contrast(28)')
     })
 
     it('draws one radial gradient per source, from its heat color to transparent', () => {

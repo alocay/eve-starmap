@@ -27,7 +27,7 @@ export interface HeatmapAreaLayerOptions extends ColorScaleOptions {
   // 'contour' (default): field-based nested intensity bands. 'gooey': blurred
   // merging blobs with a continuous per-source gradient, no bands.
   style?: 'gooey' | 'contour'
-  // Screen-space px, per-source influence radius. Default 40.
+  // Screen-space px, per-source influence radius. Default 18.
   radius?: number
   // 'contour'-only, clamped 1-4. Default 2. Ignored for 'gooey'.
   bands?: number
@@ -74,7 +74,7 @@ export function heatmapAreaLayer(values: Map<number, number>, options: HeatmapAr
   const opacityMin = options.opacityMin ?? 1
   const opacityMax = options.opacityMax ?? 1
   const style = options.style ?? 'contour'
-  const radius = options.radius ?? 40
+  const radius = options.radius ?? 18
   const blurPx = options.blurPx ?? radius * 0.3
   const baseValue = options.min ?? (rawValues.length > 0 ? Math.min(...rawValues) : 0)
   const baseColor = colorFor(baseValue)
