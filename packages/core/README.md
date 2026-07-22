@@ -2,6 +2,10 @@
 
 Framework-agnostic Canvas 2D renderer for EVE Online's 2D starmap — from a single constellation up to the full galaxy — with a pluggable layer system.
 
+## Demo
+
+**[Try the playground](https://alocay.github.io/eve-starmap/playground/index.html)** — real pan/zoom/click/hover, system search, heatmap/heatmap-area/region-label toggles, and a route lookup.
+
 ## Install
 ```
 npm install eve-starmap

@@ -2,6 +2,10 @@
 
 React wrapper for [eve-starmap](https://www.npmjs.com/package/eve-starmap).
 
+## Demo
+
+**[Try the playground](https://alocay.github.io/eve-starmap/playground/index.html)** — real pan/zoom/click/hover, system search, heatmap/heatmap-area/region-label toggles, and a route lookup.
+
 ## Install
 ```
 npm install eve-starmap-react eve-starmap react

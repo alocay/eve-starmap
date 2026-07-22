@@ -8,6 +8,10 @@ A reusable, framework-agnostic library for rendering EVE Online's 2D starmap —
 - `packages/core` (`eve-starmap`) — the renderer, layer system, bundled data. Framework-agnostic.
 - `packages/react` (`eve-starmap-react`) — thin `<EveStarmap/>` wrapper.
 
+## Demo
+
+**[Try the playground](https://alocay.github.io/eve-starmap/playground/index.html)** — real pan/zoom/click/hover, system search, heatmap/heatmap-area/region-label toggles, and a route lookup.
+
 ## Usage
 
 ```js
