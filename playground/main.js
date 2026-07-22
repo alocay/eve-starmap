@@ -61,56 +61,15 @@ const fitScale = Math.min(canvas.width / dataWidth, canvas.height / dataHeight) 
 
 // Demo heatmap data, shared by all three heatmap toggles (dots, gooey,
 // contour) so switching between them shows the same values rendered three
-// different ways instead of three unrelated datasets: a few tight, real
-// stargate-adjacent clusters at widely different magnitudes (so contour's
-// nested bands and gooey's gradient depth visibly differ cluster to
-// cluster) plus a couple of fully isolated single-system hotspots (so
-// there's always at least one blob that stays on its own, however close
-// you zoom in).
-function buildStargateAdjacency(stargates) {
-  const adjacency = new Map()
-  for (const { fromSystemId, toSystemId } of stargates) {
-    if (!adjacency.has(fromSystemId)) adjacency.set(fromSystemId, [])
-    if (!adjacency.has(toSystemId)) adjacency.set(toSystemId, [])
-    adjacency.get(fromSystemId).push(toSystemId)
-    adjacency.get(toSystemId).push(fromSystemId)
-  }
-  return adjacency
-}
-
-// Well-known trade hubs (findable via the search box above) at descending
-// magnitudes, so the busiest hub reads as the hottest, most fully-banded blob
-// and the quietest reads as a faint single-band wash.
-const HEATMAP_AREA_HUBS = [
-  { name: 'Jita', magnitude: 5_000_000_000 },
-  { name: 'Amarr', magnitude: 3_000_000_000 },
-  { name: 'Dodixie', magnitude: 1_500_000_000 },
-  { name: 'Rens', magnitude: 800_000_000 },
-  { name: 'Hek', magnitude: 400_000_000 },
-]
-
-function buildDemoHeatmapValues(universeData) {
-  const adjacency = buildStargateAdjacency(universeData.stargates)
-  const byName = new Map(universeData.systems.map(s => [s.name, s.id]))
+// different ways instead of three unrelated datasets: a random scatter
+// across the galaxy at widely varying magnitudes, for more span/variety
+// than a handful of hand-picked hub clusters would show.
+function buildDemoHeatmapValues(systems, count) {
+  const shuffled = [...systems].sort(() => Math.random() - 0.5)
   const values = new Map()
-
-  for (const { name, magnitude } of HEATMAP_AREA_HUBS) {
-    const seedId = byName.get(name)
-    if (seedId == null) continue
-    values.set(seedId, magnitude)
-    // Immediate stargate neighbors only, run cooler than their hub, so each
-    // cluster reads as one hot core fading outward rather than a uniform disc.
-    for (const neighborId of adjacency.get(seedId) ?? []) {
-      values.set(neighborId, magnitude * (0.3 + Math.random() * 0.4))
-    }
+  for (const system of shuffled.slice(0, count)) {
+    values.set(system.id, Math.random() * 5_000_000_000)
   }
-
-  const systemIds = universeData.systems.map(s => s.id)
-  for (let i = 0; i < 3; i++) {
-    const id = systemIds[Math.floor(Math.random() * systemIds.length)]
-    values.set(id, 2_000_000_000 + Math.random() * 2_000_000_000)
-  }
-
   return values
 }
 
@@ -127,7 +86,7 @@ function resolveSystemId(input) {
   return systemIdByLowerName.get(trimmed.toLowerCase())
 }
 
-const demoHeatmapValues = buildDemoHeatmapValues(defaultUniverseData)
+const demoHeatmapValues = buildDemoHeatmapValues(defaultUniverseData.systems, 200)
 const demoHeatmapLayer = heatmapLayer(demoHeatmapValues, { radius: 5 })
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 // null | 'contour' | 'gooey' | 'heatmap' -- the three heatmap toggles are
