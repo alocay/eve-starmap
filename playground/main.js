@@ -59,22 +59,14 @@ const dataWidth = bounds.maxX - bounds.minX
 const dataHeight = bounds.maxY - bounds.minY
 const fitScale = Math.min(canvas.width / dataWidth, canvas.height / dataHeight) * 0.9
 
-// Demo heatmap: assign a random ISK-like value to a sample of systems, so
-// the layer toggle has something visible to show.
-function buildDemoHeatmap(systems, count) {
-  const shuffled = [...systems].sort(() => Math.random() - 0.5)
-  const values = new Map()
-  for (const system of shuffled.slice(0, count)) {
-    values.set(system.id, Math.random() * 5_000_000_000)
-  }
-  return values
-}
-
-// Demo heatmap-area data: a few tight, real stargate-adjacent clusters at
-// widely different magnitudes (so contour's nested bands and gooey's gradient
-// depth visibly differ cluster to cluster) plus a couple of fully isolated
-// single-system hotspots (so there's always at least one blob that stays on
-// its own, however close you zoom in).
+// Demo heatmap data, shared by all three heatmap toggles (dots, gooey,
+// contour) so switching between them shows the same values rendered three
+// different ways instead of three unrelated datasets: a few tight, real
+// stargate-adjacent clusters at widely different magnitudes (so contour's
+// nested bands and gooey's gradient depth visibly differ cluster to
+// cluster) plus a couple of fully isolated single-system hotspots (so
+// there's always at least one blob that stays on its own, however close
+// you zoom in).
 function buildStargateAdjacency(stargates) {
   const adjacency = new Map()
   for (const { fromSystemId, toSystemId } of stargates) {
@@ -97,7 +89,7 @@ const HEATMAP_AREA_HUBS = [
   { name: 'Hek', magnitude: 400_000_000 },
 ]
 
-function buildDemoHeatmapAreaData(universeData) {
+function buildDemoHeatmapValues(universeData) {
   const adjacency = buildStargateAdjacency(universeData.stargates)
   const byName = new Map(universeData.systems.map(s => [s.name, s.id]))
   const values = new Map()
@@ -135,8 +127,8 @@ function resolveSystemId(input) {
   return systemIdByLowerName.get(trimmed.toLowerCase())
 }
 
-const demoHeatmapLayer = heatmapLayer(buildDemoHeatmap(defaultUniverseData.systems, 200), { radius: 5 })
-const demoHeatmapAreaValues = buildDemoHeatmapAreaData(defaultUniverseData)
+const demoHeatmapValues = buildDemoHeatmapValues(defaultUniverseData)
+const demoHeatmapLayer = heatmapLayer(demoHeatmapValues, { radius: 5 })
 const demoRegionLabelLayer = regionLabelLayer(defaultUniverseData.regions ?? [], defaultUniverseData.systems)
 // null | 'contour' | 'gooey' | 'heatmap' -- the three heatmap toggles are
 // mutually exclusive: turning one on turns off whichever of the others was
@@ -173,7 +165,7 @@ function updateLayers() {
   const layers = [highlightLayer]
   if (regionsOn) layers.push(demoRegionLabelLayer)
   if (activeHeatmap === 'heatmap') layers.push(demoHeatmapLayer)
-  if (activeHeatmap === 'contour' || activeHeatmap === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapAreaValues, { style: activeHeatmap, bands: 4 }))
+  if (activeHeatmap === 'contour' || activeHeatmap === 'gooey') layers.push(heatmapAreaLayer(demoHeatmapValues, { style: activeHeatmap, bands: 4 }))
   if (currentRouteLayer) layers.push(currentRouteLayer)
   renderer.setLayers(layers)
 }
