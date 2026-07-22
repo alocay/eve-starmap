@@ -1,6 +1,6 @@
 {
   "name": "eve-starmap-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React wrapper for eve-starmap.",
   "repository": {
     "type": "git",
@@ -29,7 +29,7 @@
     "react": "^18.0.0"
   },
   "dependencies": {
-    "eve-starmap": "^0.1.0"
+    "eve-starmap": "^0.1.1"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.1",
